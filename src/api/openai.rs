@@ -1,5 +1,5 @@
 use axum::extract::{Path as AxPath, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use axum_extra::extract::Multipart;
@@ -351,7 +351,7 @@ pub async fn images_generations(
         id: Uuid::new_v4().to_string(),
         timestamp: chrono::Utc::now().to_rfc3339(),
         endpoint: "/v1/images/generations".to_string(),
-        model_requested: "hcs-image".to_string(),
+        model_requested: payload.model.clone(),
         model_used: "hcs-image".to_string(),
         prompt_tokens: 0,
         completion_tokens: 0,
@@ -448,6 +448,93 @@ pub async fn list_files(State(state): State<AppState>) -> Json<Value> {
         })
     }).collect();
     Json(serde_json::json!({ "object": "list", "data": data }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UploadFileJsonRequest {
+    pub filename: String,
+    pub content: String,
+    pub purpose: Option<String>,
+}
+
+pub async fn upload_file(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let content_type = headers.get(header::CONTENT_TYPE)
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("");
+
+    let (filename, file_bytes, purpose) = if content_type.contains("application/json") {
+        if let Ok(req) = serde_json::from_slice::<UploadFileJsonRequest>(&body) {
+            (req.filename, req.content.into_bytes(), req.purpose.unwrap_or_else(|| "assistants".to_string()))
+        } else {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({ "error": { "message": "Invalid JSON file upload payload" } })),
+            ));
+        }
+    } else {
+        let fname = format!("file_{}.dat", Uuid::new_v4().to_string().chars().take(8).collect::<String>());
+        (fname, body.to_vec(), "assistants".to_string())
+    };
+
+    let id = format!("file-{}", Uuid::new_v4().to_string().replace('-', ""));
+    let disk_path = state.config.storage.artifacts_dir.join(&id);
+    let _ = tokio::fs::create_dir_all(&state.config.storage.artifacts_dir).await;
+    
+    if let Err(e) = tokio::fs::write(&disk_path, &file_bytes).await {
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": { "message": format!("Failed to save file: {}", e) } })),
+        ));
+    }
+
+    let rec = state.db.save_artifact(
+        &id,
+        &filename,
+        "application/octet-stream",
+        file_bytes.len() as u64,
+        &serde_json::json!({ "purpose": purpose }).to_string(),
+    ).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": { "message": format!("Database error: {}", e) } })),
+        )
+    })?;
+
+    Ok(Json(serde_json::json!({
+        "id": rec.id,
+        "object": "file",
+        "bytes": rec.size_bytes,
+        "created_at": chrono::Utc::now().timestamp(),
+        "filename": rec.filename,
+        "purpose": purpose,
+        "status": "processed",
+    })))
+}
+
+pub async fn get_file_content(
+    State(state): State<AppState>,
+    AxPath(id): AxPath<String>,
+) -> Result<Response, (StatusCode, Json<Value>)> {
+    if let Ok(Some(f)) = state.db.get_artifact(&id) {
+        let disk_path = state.config.storage.artifacts_dir.join(&id);
+        if let Ok(bytes) = tokio::fs::read(&disk_path).await {
+            let res = Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, "application/octet-stream")
+                .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"{}\"", f.filename))
+                .body(axum::body::Body::from(bytes))
+                .unwrap();
+            return Ok(res);
+        }
+    }
+    Err((
+        StatusCode::NOT_FOUND,
+        Json(serde_json::json!({ "error": { "message": "File not found" } })),
+    ))
 }
 
 pub async fn get_file(

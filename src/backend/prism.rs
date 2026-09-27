@@ -2,9 +2,10 @@ use std::path::Path;
 use std::process::Stdio;
 use std::time::Duration;
 use tokio::process::{Child, Command};
-use tracing::{info, warn};
+use tracing::info;
 
 pub struct PrismWorker {
+    #[allow(dead_code)]
     pub model_id: String,
     pub port: u16,
     child: Option<Child>,

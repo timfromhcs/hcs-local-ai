@@ -378,6 +378,7 @@ pub async fn create_key(
     match state.db.insert_api_key(&payload.name, &raw_key, &perms) {
         Ok(rec) => Ok(Json(serde_json::json!({
             "key": rec,
+            "raw_key": raw_key,
             "raw_secret_key": raw_key,
             "warning": "Store this key safely. It will not be shown again."
         }))),

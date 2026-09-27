@@ -13,8 +13,13 @@ pub struct Candidate {
     pub description: String,
 }
 
+fn default_id() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenJevDecisionRequest {
+    #[serde(default = "default_id")]
     pub id: String,
     #[serde(default = "default_group_id")]
     pub group_id: String,
@@ -38,6 +43,7 @@ pub struct OpenJevDecisionResponse {
     pub r#type: String,
     pub choice: Option<String>,
     pub selected_label: Option<char>,
+    pub selected_id: Option<String>,
     pub candidate_id: Option<String>,
     pub probabilities: HashMap<String, f32>,
     pub raw_response: String,
@@ -97,7 +103,8 @@ impl OpenJevDecisionRequest {
         let allowed_labels: Vec<String> = LABELS[..self.criteria.len()].iter().map(|c| c.to_string()).collect();
 
         format!(
-            "{}{}\nReturn only the selected letter: {}.\nAnswer:",
+            "// Contract: {}\n{}{}\nReturn only the selected letter: {}.\nAnswer:",
+            PROMPT_VERSION,
             prefix,
             suffix_json,
             allowed_labels.join(", ")
@@ -151,9 +158,67 @@ impl OpenJevDecisionRequest {
             r#type: self.primitive.clone(),
             choice: choice.clone(),
             selected_label: found_label,
+            selected_id: candidate_id.clone(),
             candidate_id,
             probabilities: probs,
             raw_response: raw_output.to_string(),
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_openjev_validation() {
+        let req = OpenJevDecisionRequest {
+            id: "dec_1".to_string(),
+            group_id: "test".to_string(),
+            primitive: "choice".to_string(),
+            state: "Tests failed".to_string(),
+            instructions: "Pick an action".to_string(),
+            criteria: vec![
+                Candidate { id: "retry".to_string(), description: "Retry test".to_string() },
+                Candidate { id: "abort".to_string(), description: "Abort run".to_string() },
+            ],
+        };
+        assert!(req.validate().is_ok());
+
+        // Less than 2 candidates should fail
+        let mut invalid = req.clone();
+        invalid.criteria = vec![Candidate { id: "retry".to_string(), description: "Retry".to_string() }];
+        assert!(invalid.validate().is_err());
+
+        // Duplicate candidate IDs should fail
+        let mut dup = req.clone();
+        dup.criteria.push(Candidate { id: "retry".to_string(), description: "Duplicate".to_string() });
+        assert!(dup.validate().is_err());
+    }
+
+    #[test]
+    fn test_openjev_rendering_and_parsing() {
+        let req = OpenJevDecisionRequest {
+            id: "dec_2".to_string(),
+            group_id: "test".to_string(),
+            primitive: "choice".to_string(),
+            state: "Code error".to_string(),
+            instructions: "Select fix".to_string(),
+            criteria: vec![
+                Candidate { id: "fix_syntax".to_string(), description: "Fix syntax error".to_string() },
+                Candidate { id: "add_dep".to_string(), description: "Add missing dependency".to_string() },
+                Candidate { id: "ignore".to_string(), description: "Ignore warning".to_string() },
+            ],
+        };
+
+        let prompt = req.render_prompt();
+        assert!(prompt.contains(PROMPT_VERSION));
+        assert!(prompt.contains("A, B, C"));
+
+        let resp = req.parse_output("  B. We should add dependency");
+        assert_eq!(resp.selected_label, Some('B'));
+        assert_eq!(resp.candidate_id, Some("add_dep".to_string()));
+        assert!(*resp.probabilities.get("add_dep").unwrap() > 0.9);
+    }
+}
+

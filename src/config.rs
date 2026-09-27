@@ -101,8 +101,29 @@ impl Config {
         Self::default()
     }
 
+    #[allow(dead_code)]
     pub fn save(&self, path: &Path) -> std::io::Result<()> {
         let content = serde_yaml::to_string(self).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         std::fs::write(path, content)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_config_defaults_and_save() {
+        let cfg = Config::default();
+        assert_eq!(cfg.server.port, 8787);
+        assert_eq!(cfg.resources.max_heavy_active, 1);
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("test_config.yaml");
+        cfg.save(&path).unwrap();
+
+        let loaded = Config::load_or_default(Some(&path));
+        assert_eq!(loaded.server.port, 8787);
+    }
+}
+

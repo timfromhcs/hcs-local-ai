@@ -149,8 +149,9 @@ pub fn create_router(state: AppState) -> Router {
         .route("/v1/responses", post(openai::responses))
         .route("/v1/images/generations", post(openai::images_generations))
         .route("/v1/images/edits", post(openai::images_edits))
-        .route("/v1/files", get(openai::list_files).post(openai::list_files))
+        .route("/v1/files", get(openai::list_files).post(openai::upload_file))
         .route("/v1/files/{id}", get(openai::get_file).delete(openai::delete_file))
+        .route("/v1/files/{id}/content", get(openai::get_file_content))
         .route("/v1/batches", get(openai::create_batch).post(openai::create_batch))
         .route("/v1/batches/{id}", get(openai::get_batch))
 

@@ -4,11 +4,13 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use crate::api::AppState;
 
+#[allow(dead_code)]
 pub struct AuthUser {
     pub key_id: Option<String>,
     pub key_name: Option<String>,
 }
 
+#[allow(dead_code)]
 pub struct RequireAuth(pub AuthUser);
 
 impl FromRequestParts<AppState> for RequireAuth {

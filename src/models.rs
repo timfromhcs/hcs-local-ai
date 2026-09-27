@@ -193,3 +193,48 @@ impl ModelRegistry {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_model_alias_resolution() {
+        let registry = ModelRegistry::new();
+        assert_eq!(registry.resolve_alias("auto"), "hcs-general");
+        assert_eq!(registry.resolve_alias("coder"), "hcs-coder");
+        assert_eq!(registry.resolve_alias("hcs-coder"), "hcs-coder");
+        assert_eq!(registry.resolve_alias("subagent"), "hcs-subagent");
+        assert_eq!(registry.resolve_alias("vlm"), "hcs-vlm");
+        assert_eq!(registry.resolve_alias("vision"), "hcs-vlm");
+        assert_eq!(registry.resolve_alias("image"), "hcs-image");
+        assert_eq!(registry.resolve_alias("flux"), "hcs-image");
+        assert_eq!(registry.resolve_alias("judge"), "hcs-judge");
+        assert_eq!(registry.resolve_alias("unknown-thing"), "hcs-general");
+    }
+
+    #[test]
+    fn test_model_lifecycle_transitions() {
+        let registry = ModelRegistry::new();
+        // Scanning local models directory
+        registry.scan_and_load("models").unwrap();
+        let models = registry.list_models();
+        assert!(!models.is_empty());
+
+        let subagent = registry.get_model("hcs-subagent");
+        assert!(subagent.is_some());
+
+        registry.update_state("hcs-subagent", ModelLifecycleState::Loading);
+        assert_eq!(registry.get_model("hcs-subagent").unwrap().state, ModelLifecycleState::Loading);
+
+        registry.set_worker("hcs-subagent", 8800, 1234);
+        let ready = registry.get_model("hcs-subagent").unwrap();
+        assert_eq!(ready.state, ModelLifecycleState::Ready);
+        assert_eq!(ready.worker_port, Some(8800));
+
+        let crash_count = registry.record_crash("hcs-subagent");
+        assert_eq!(crash_count, 1);
+        assert_eq!(registry.get_model("hcs-subagent").unwrap().worker_port, None);
+    }
+}
+

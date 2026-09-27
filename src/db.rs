@@ -70,6 +70,16 @@ pub struct ArtifactRecord {
 impl Database {
     pub fn init<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
         let conn = Connection::open(path)?;
+        Self::init_with_conn(conn)
+    }
+
+    #[allow(dead_code)]
+    pub fn new_in_memory() -> anyhow::Result<Self> {
+        let conn = Connection::open_in_memory()?;
+        Self::init_with_conn(conn)
+    }
+
+    fn init_with_conn(conn: Connection) -> anyhow::Result<Self> {
         conn.execute_batch(
             r#"
             PRAGMA journal_mode = WAL;
@@ -222,6 +232,7 @@ impl Database {
         })
     }
 
+    #[allow(dead_code)]
     pub fn verify_api_key(&self, raw_key: &str) -> anyhow::Result<Option<ApiKeyRecord>> {
         use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
@@ -405,6 +416,7 @@ impl Database {
         })
     }
 
+    #[allow(dead_code)]
     pub fn update_job(&self, id: &str, status: &str, result: Option<&str>, error: Option<&str>) -> anyhow::Result<()> {
         let now = chrono::Utc::now().to_rfc3339();
         let conn = self.conn.lock().unwrap();
@@ -435,6 +447,7 @@ impl Database {
         }
     }
 
+    #[allow(dead_code)]
     pub fn list_jobs(&self, limit: usize) -> anyhow::Result<Vec<JobRecord>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare("SELECT id, job_type, payload, status, result, error, created_at, finished_at FROM jobs ORDER BY created_at DESC LIMIT ?1")?;
@@ -521,6 +534,7 @@ impl Database {
     }
 
     // Audit log
+    #[allow(dead_code)]
     pub fn audit_log(&self, action: &str, actor: &str, details: &str) -> anyhow::Result<()> {
         let id = Uuid::new_v4().to_string();
         let now = chrono::Utc::now().to_rfc3339();
@@ -532,3 +546,63 @@ impl Database {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_db_api_key_lifecycle() {
+        let db = Database::new_in_memory().expect("in-memory db failed");
+        let raw_key = "hcs-test-secret-key-12345";
+        let rec = db.insert_api_key("test-key", raw_key, &["read".to_string(), "write".to_string()]).unwrap();
+        assert_eq!(rec.name, "test-key");
+
+        // Verify valid key
+        let verified = db.verify_api_key(raw_key).unwrap();
+        assert!(verified.is_some());
+        assert_eq!(verified.unwrap().id, rec.id);
+
+        // Verify invalid key
+        let invalid = db.verify_api_key("wrong-key").unwrap();
+        assert!(invalid.is_none());
+
+        // Revoke key
+        let revoked = db.revoke_api_key(&rec.id).unwrap();
+        assert!(revoked);
+
+        // Verify revoked key returns None
+        let after_revoke = db.verify_api_key(raw_key).unwrap();
+        assert!(after_revoke.is_none());
+    }
+
+    #[test]
+    fn test_db_memory_search() {
+        let db = Database::new_in_memory().expect("in-memory db failed");
+        db.upsert_memory("arch", "vulkan", "Unified memory Vulkan pipeline for AMD", "test").unwrap();
+        db.upsert_memory("arch", "cuda", "CUDA pipeline for Nvidia", "test").unwrap();
+
+        let results = db.search_memory("Vulkan", Some("arch")).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].key, "vulkan");
+
+        let deleted = db.delete_memory(&results[0].id).unwrap();
+        assert!(deleted);
+        assert_eq!(db.list_memory(10).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_db_jobs_and_audit() {
+        let db = Database::new_in_memory().expect("in-memory db failed");
+        let job = db.create_job("batch_infer", r#"{"batch_id":"b1"}"#).unwrap();
+        assert_eq!(job.status, "pending");
+
+        db.update_job(&job.id, "completed", Some(r#"{"success":true}"#), None).unwrap();
+        let jobs = db.list_jobs(10).unwrap();
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs[0].status, "completed");
+
+        db.audit_log("test_action", "admin", "details").unwrap();
+    }
+}
+

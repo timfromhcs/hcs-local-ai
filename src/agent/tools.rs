@@ -222,3 +222,68 @@ impl ToolExecutor {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_tool_executor_files_and_command() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let executor = ToolExecutor::new(temp_dir.path());
+
+        // 1. file_write
+        let write_call = ToolCall {
+            id: "call_1".to_string(),
+            name: "file_write".to_string(),
+            arguments: serde_json::json!({
+                "path": "hello.txt",
+                "content": "Hello HCS World!"
+            }),
+        };
+        let write_res = executor.execute(&write_call).await;
+        assert!(write_res.success);
+
+        // 2. file_read
+        let read_call = ToolCall {
+            id: "call_2".to_string(),
+            name: "file_read".to_string(),
+            arguments: serde_json::json!({
+                "path": "hello.txt"
+            }),
+        };
+        let read_res = executor.execute(&read_call).await;
+        assert!(read_res.success);
+        assert_eq!(read_res.output, "Hello HCS World!");
+
+        // 3. file_edit
+        let edit_call = ToolCall {
+            id: "call_3".to_string(),
+            name: "file_edit".to_string(),
+            arguments: serde_json::json!({
+                "path": "hello.txt",
+                "target_text": "World",
+                "replacement_text": "Autonomous Agent"
+            }),
+        };
+        let edit_res = executor.execute(&edit_call).await;
+        assert!(edit_res.success);
+
+        // Verify edit
+        let read_again = executor.execute(&read_call).await;
+        assert_eq!(read_again.output, "Hello HCS Autonomous Agent!");
+
+        // 4. command_exec (echo)
+        let cmd_call = ToolCall {
+            id: "call_4".to_string(),
+            name: "command_exec".to_string(),
+            arguments: serde_json::json!({
+                "command": "cmd /c echo 42"
+            }),
+        };
+        let cmd_res = executor.execute(&cmd_call).await;
+        assert!(cmd_res.success);
+        assert!(cmd_res.output.contains("42"));
+    }
+}
+
