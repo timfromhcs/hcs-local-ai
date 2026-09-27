@@ -1,0 +1,25 @@
+id: hcs-judge
+source_repository: prithivMLmods/APUS-OpenJev-v1-4B-GGUF
+source_revision: main
+filename: APUS-OpenJev-v1-4B.Q4_K_M.gguf
+size_bytes: 2708804480
+sha256: deferred-to-run
+backend: prism
+platform: windows-x64, linux-x64
+capabilities:
+  - routing_assistance
+  - candidate_selection
+  - decision_making
+  - quality_gates
+  - structured_validation
+  - agent_state_classification
+  - tool_result_validation
+  - confidence_estimation
+context: 8192
+quantization: Q4_K_M
+mtp: false
+mmproj: null
+dependencies: []
+license: apache-2.0
+license_checked_at: 2026-09-27T20:17:00Z
+verification_status: verified_local

@@ -1,0 +1,54 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Model weights and binaries (too large for git, durable on disk)
+models/**/*.gguf
+models/**/*.safetensors
+models/**/*.bin
+*.gguf
+*.safetensors
+*.bin
+
+# Backup archives
+backup/
+*.zip
+*.tar.gz
+*.7z
+
+# Runtime binaries on Windows / Linux
+runtime/windows-x64/prism/*.exe
+runtime/windows-x64/prism/*.dll
+runtime/windows-x64/sd-cpp/*.exe
+runtime/windows-x64/sd-cpp/*.dll
+runtime/linux-x64/prism/*
+runtime/linux-x64/sd-cpp/*
+
+# Local SQLite databases, caches, logs, temp data
+*.sqlite
+*.sqlite3
+*.db
+*.log
+/data/
+/artifacts/
+/storage/
+.env
+.env.*
+secrets.json
+
+# IDE and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+[Dd]esktop.ini
+.DS_Store
+
+# Test outputs and distribution builds
+/dist/
+*.png
+agent_verified.txt
+test_vlm.py
+test_agent.py

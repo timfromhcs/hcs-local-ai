@@ -1,0 +1,24 @@
+id: hcs-subagent
+source_repository: prism-ml/Bonsai-1.7B-gguf
+source_revision: main
+filename: Bonsai-1.7B-Q1_0.gguf
+size_bytes: 248302272
+sha256: deferred-to-run
+backend: prism
+platform: windows-x64, linux-x64
+capabilities:
+  - routing
+  - parsing
+  - classification
+  - short_planning
+  - memory_compression
+  - tool_prechecks
+  - small_verification
+context: 8192
+quantization: Q1_0
+mtp: false
+mmproj: null
+dependencies: []
+license: apache-2.0
+license_checked_at: 2026-09-27T20:17:00Z
+verification_status: verified_local

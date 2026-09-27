@@ -1,0 +1,41 @@
+{
+  "system": {
+    "os": "Windows 11 Pro",
+    "cpu": "AMD Ryzen with 16 logical cores",
+    "gpu": "AMD Radeon(TM) Graphics (iGPU)",
+    "backend": "Vulkan",
+    "unified_memory_gb": 20
+  },
+  "benchmarks": {
+    "hcs-subagent": {
+      "model": "Bonsai-1.7B-Q1_0.gguf",
+      "prompt_eval_tok_per_sec": 386.30,
+      "generation_tok_per_sec": 72.82,
+      "latency_p50_ms": 250
+    },
+    "hcs-general": {
+      "model": "Ternary-Bonsai-4B-PQ2_0.gguf",
+      "generation_tok_per_sec": 41.20,
+      "latency_p50_ms": 480
+    },
+    "hcs-judge": {
+      "model": "APUS-OpenJev-v1-4B.Q4_K_M.gguf",
+      "decision_latency_ms": 243,
+      "contract": "jev.dynamic.prompt.v2",
+      "accuracy": 1.0
+    },
+    "hcs-vlm": {
+      "model": "Qwen3.5-9B-The-Defiant-Fable-MAX-Q4_K_M.gguf + mmproj-F16.gguf",
+      "prompt_eval_tok_per_sec": 41.88,
+      "generation_tok_per_sec": 8.09,
+      "multimodal_verified": true
+    },
+    "hcs-image": {
+      "model": "bonsai-flux2-klein-ternary-q2_k.gguf + Qwen3-4B-Q4_K_M.gguf",
+      "t2i_512x512_4steps_sec": 133.9,
+      "i2i_512x512_3steps_sec": 104.0,
+      "device": "Vulkan0 (AMD Radeon Graphics)"
+    }
+  },
+  "timestamp": "2026-09-27T20:30:00Z"
+}

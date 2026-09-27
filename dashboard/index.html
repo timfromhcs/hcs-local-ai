@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HCS Local AI — Control Center & Observability</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="dark-theme">
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-box">
+          <span class="logo-icon">⚡</span>
+          <div class="logo-text">
+            <span class="brand-title">HCS LOCAL AI</span>
+            <span class="brand-version">v1.0.0 • Vulkan</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-section-title">CORE CONTROL</div>
+        <button class="nav-item active" data-page="overview">
+          <span class="nav-icon">📊</span> Overview
+        </button>
+        <button class="nav-item" data-page="models">
+          <span class="nav-icon">🧠</span> Models & Runtime
+        </button>
+        <button class="nav-item" data-page="requests">
+          <span class="nav-icon">🔄</span> Requests & Traces
+        </button>
+        <button class="nav-item" data-page="routing">
+          <span class="nav-icon">🔀</span> Smart Router
+        </button>
+        <button class="nav-item" data-page="tokens">
+          <span class="nav-icon">📈</span> Tokens & Telemetry
+        </button>
+
+        <div class="nav-section-title">AGENT & MEMORY</div>
+        <button class="nav-item" data-page="agent">
+          <span class="nav-icon">🤖</span> Autonomous Agent
+        </button>
+        <button class="nav-item" data-page="memory">
+          <span class="nav-icon">💾</span> Persistent Memory
+        </button>
+        <button class="nav-item" data-page="explorer">
+          <span class="nav-icon">🧪</span> API Explorer
+        </button>
+
+        <div class="nav-section-title">ADMINISTRATION</div>
+        <button class="nav-item" data-page="keys">
+          <span class="nav-icon">🔑</span> API Keys
+        </button>
+        <button class="nav-item" data-page="system">
+          <span class="nav-icon">⚙️</span> System & Doctor
+        </button>
+        <button class="nav-item" data-page="benchmark">
+          <span class="nav-icon">⏱️</span> Benchmarks
+        </button>
+        <button class="nav-item" data-page="logs">
+          <span class="nav-icon">📜</span> Live Logs
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="health-pill" id="daemon-health-pill">
+          <span class="status-dot green"></span> Daemon Healthy
+        </div>
+        <div class="hw-mini-spec">Windows Vulkan • 24GB Unified</div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Header Bar -->
+      <header class="topbar">
+        <div class="page-title-box">
+          <h1 id="current-page-title">System Overview</h1>
+          <span class="breadcrumbs" id="current-page-subtitle">Real-time daemon state and hardware monitors</span>
+        </div>
+        <div class="topbar-actions">
+          <div class="live-indicator">
+            <span class="pulse-dot"></span> LIVE SSE
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btn-refresh-all">↻ Refresh</button>
+          <a href="/hcs/v1/doctor" target="_blank" class="btn btn-primary btn-sm">Doctor JSON</a>
+        </div>
+      </header>
+
+      <!-- View Containers -->
+      <div class="content-body">
+        <!-- 1. Overview Page -->
+        <section id="page-overview" class="view-panel active">
+          <div class="metrics-grid">
+            <div class="card metric-card">
+              <div class="metric-header">
+                <span class="metric-label">UNIFIED MEMORY USAGE</span>
+                <span class="metric-badge" id="mem-percent-badge">0%</span>
+              </div>
+              <div class="metric-value" id="mem-usage-val">-- / -- GB</div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="mem-progress" style="width: 0%;"></div>
+              </div>
+              <div class="metric-subtext" id="mem-avail-text">Available: -- GB (Reserve: 3GB)</div>
+            </div>
+
+            <div class="card metric-card">
+              <div class="metric-header">
+                <span class="metric-label">CPU UTILIZATION</span>
+                <span class="metric-badge">System</span>
+              </div>
+              <div class="metric-value" id="cpu-usage-val">0.0%</div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="cpu-progress" style="width: 0%;"></div>
+              </div>
+              <div class="metric-subtext" id="cpu-cores-text">-- Cores Active</div>
+            </div>
+
+            <div class="card metric-card">
+              <div class="metric-header">
+                <span class="metric-label">TOTAL REQUESTS</span>
+                <span class="metric-badge success">200 OK</span>
+              </div>
+              <div class="metric-value" id="total-requests-val">0</div>
+              <div class="metric-subtext" id="avg-latency-text">Avg Latency: -- ms</div>
+            </div>
+
+            <div class="card metric-card">
+              <div class="metric-header">
+                <span class="metric-label">ACTIVE HEAVY MODELS</span>
+                <span class="metric-badge warning">Limit: 1</span>
+              </div>
+              <div class="metric-value" id="heavy-models-val">0 / 1</div>
+              <div class="metric-subtext">Coder / VLM / Image Concurrency Gate</div>
+            </div>
+          </div>
+
+          <!-- Active Models & Quick Actions -->
+          <div class="section-row">
+            <div class="card col-8">
+              <div class="card-header">
+                <h3>Discovered Models & Status</h3>
+                <span class="badge blue">HDD Durability First</span>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table" id="overview-models-table">
+                  <thead>
+                    <tr>
+                      <th>Model ID</th>
+                      <th>Backend</th>
+                      <th>Quant</th>
+                      <th>Context</th>
+                      <th>Status</th>
+                      <th>Port</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td colspan="7" class="text-center">Loading model status...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card col-4">
+              <div class="card-header">
+                <h3>Quick Test & Smoke</h3>
+              </div>
+              <div class="quick-test-box">
+                <p class="text-muted">Trigger immediate inference through local Vulkan runtime:</p>
+                <div class="quick-btn-group">
+                  <button class="btn btn-outline btn-block" onclick="quickSmoke('hcs-subagent')">Smoke hcs-subagent (1.7B)</button>
+                  <button class="btn btn-outline btn-block" onclick="quickSmoke('hcs-general')">Smoke hcs-general (4B)</button>
+                  <button class="btn btn-outline btn-block" onclick="quickSmoke('hcs-judge')">Smoke hcs-judge (OpenJev)</button>
+                  <button class="btn btn-outline btn-block" onclick="quickSmoke('hcs-coder')">Smoke hcs-coder (27B)</button>
+                  <button class="btn btn-outline btn-block" onclick="quickSmokeImage()">Smoke hcs-image (FLUX.2)</button>
+                </div>
+                <div id="quick-smoke-result" class="code-result-box hidden"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Models & Runtime Page -->
+        <section id="page-models" class="view-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>Model Lifecycle & Hardware Binding</h3>
+              <div class="header-tools">
+                <span class="text-muted">Heavy Concurrency Semaphore: <b id="heavy-sem-status">1 Active max</b></span>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" id="full-models-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Source Repo</th>
+                    <th>File</th>
+                    <th>Disk Size</th>
+                    <th>Quant</th>
+                    <th>State</th>
+                    <th>Loaded At</th>
+                    <th>Worker</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Requests & Traces Page -->
+        <section id="page-requests" class="view-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>Real-Time Request Traces & Audit</h3>
+              <button class="btn btn-secondary btn-sm" onclick="loadRequests()">Refresh List</button>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" id="requests-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Endpoint</th>
+                    <th>Requested</th>
+                    <th>Used</th>
+                    <th>Tokens (In/Out)</th>
+                    <th>Latency</th>
+                    <th>Status</th>
+                    <th>Client IP</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. Smart Router Page -->
+        <section id="page-routing" class="view-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>HCS Smart Router Engine</h3>
+              <span class="badge purple">Smallest Capable Model Policy</span>
+            </div>
+            <div class="routing-rules-grid">
+              <div class="rule-card">
+                <h4>Routing Principles</h4>
+                <ul>
+                  <li><b>Parsing / Prechecks:</b> <code>hcs-subagent</code> (Bonsai 1.7B)</li>
+                  <li><b>General Chat / Reasoning:</b> <code>hcs-general</code> (Bonsai 4B)</li>
+                  <li><b>Complex Coding / SWE:</b> <code>hcs-coder</code> (Ternary 27B)</li>
+                  <li><b>Decisions & Gating:</b> <code>hcs-judge</code> (OpenJev 4B)</li>
+                  <li><b>Image Understanding:</b> <code>hcs-vlm</code> (Qwen 3.5 9B)</li>
+                  <li><b>Image Generation & Edit:</b> <code>hcs-image</code> (FLUX.2 Klein)</li>
+                </ul>
+              </div>
+              <div class="rule-card">
+                <h4>Router Test Utility</h4>
+                <div class="form-group">
+                  <label>Sample User Input / Prompt:</label>
+                  <textarea id="router-test-input" class="form-control" rows="3" placeholder="Write a Rust function to parse JSON with serde..."></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="testRouterDecision()">Analyze & Route</button>
+                <div id="router-test-output" class="code-result-box hidden mt-2"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. Tokens & Telemetry Page -->
+        <section id="page-tokens" class="view-panel">
+          <div class="metrics-grid">
+            <div class="card metric-card">
+              <span class="metric-label">PROMPT TOKENS</span>
+              <div class="metric-value" id="telemetry-prompt-tokens">0</div>
+            </div>
+            <div class="card metric-card">
+              <span class="metric-label">COMPLETION TOKENS</span>
+              <div class="metric-value" id="telemetry-comp-tokens">0</div>
+            </div>
+            <div class="card metric-card">
+              <span class="metric-label">PROMPT CACHE HIT RATE</span>
+              <div class="metric-value text-green">85.0%</div>
+            </div>
+            <div class="card metric-card">
+              <span class="metric-label">TOTAL ERRORS</span>
+              <div class="metric-value text-red" id="telemetry-errors">0</div>
+            </div>
+          </div>
+          <div class="card mt-4">
+            <div class="card-header">
+              <h3>Requests Breakdown by Model</h3>
+            </div>
+            <div id="model-breakdown-list" class="p-3"></div>
+          </div>
+        </section>
+
+        <!-- 6. Autonomous Agent Page -->
+        <section id="page-agent" class="view-panel">
+          <div class="section-row">
+            <div class="card col-6">
+              <div class="card-header">
+                <h3>Launch Autonomous Agent Goal</h3>
+              </div>
+              <div class="form-group">
+                <label>Goal Description / Coding Task:</label>
+                <textarea id="agent-goal-input" class="form-control" rows="4" placeholder="Inspect src/main.rs, add a new test, and verify compilation..."></textarea>
+              </div>
+              <button class="btn btn-primary" id="btn-run-agent" onclick="submitAgentGoal()">Execute Task Graph</button>
+            </div>
+            <div class="card col-6">
+              <div class="card-header">
+                <h3>Execution Log & Tool Actions</h3>
+                <span class="badge green" id="agent-status-badge">Idle</span>
+              </div>
+              <div id="agent-execution-log" class="code-result-box" style="min-height: 200px;">
+                Agent standby. Enter a goal to initiate tool calls.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. Persistent Memory Page -->
+        <section id="page-memory" class="view-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>Durable Knowledge & Memory Store</h3>
+              <div class="header-tools">
+                <input type="text" id="memory-search-input" class="form-control form-control-sm" placeholder="Search memory..." onkeyup="searchMemory()">
+                <button class="btn btn-primary btn-sm" onclick="showAddMemoryModal()">+ Store Entry</button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" id="memory-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Key</th>
+                    <th>Content</th>
+                    <th>Provenance</th>
+                    <th>Updated</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. API Explorer Page -->
+        <section id="page-explorer" class="view-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>Interactive API Explorer</h3>
+              <div class="tab-pills">
+                <button class="pill active" onclick="switchExplorerTab('chat')">Chat / Completions</button>
+                <button class="pill" onclick="switchExplorerTab('decision')">OpenJev Decision</button>
+                <button class="pill" onclick="switchExplorerTab('image')">Image Generation</button>
+              </div>
+            </div>
+
+            <!-- Chat Explorer -->
+            <div id="explorer-chat" class="explorer-tab-body active">
+              <div class="section-row">
+                <div class="col-6">
+                  <div class="form-group">
+                    <label>Target Model:</label>
+                    <select id="explorer-chat-model" class="form-control">
+                      <option value="auto">auto (Smart Route)</option>
+                      <option value="hcs-subagent">hcs-subagent (Bonsai 1.7B)</option>
+                      <option value="hcs-general">hcs-general (Bonsai 4B)</option>
+                      <option value="hcs-coder">hcs-coder (Bonsai 2 27B)</option>
+                      <option value="hcs-judge">hcs-judge (APUS OpenJev 4B)</option>
+                      <option value="hcs-vlm">hcs-vlm (Qwen 3.5 9B)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>User Message:</label>
+                    <textarea id="explorer-chat-msg" class="form-control" rows="4">Explain how Vulkan handles unified memory on AMD APUs.</textarea>
+                  </div>
+                  <button class="btn btn-primary" onclick="runExplorerChat()">Send Request</button>
+                </div>
+                <div class="col-6">
+                  <label>Response:</label>
+                  <div id="explorer-chat-result" class="code-result-box" style="min-height: 220px;">Ready.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Decision Explorer -->
+            <div id="explorer-decision" class="explorer-tab-body">
+              <div class="section-row">
+                <div class="col-6">
+                  <div class="form-group">
+                    <label>Shared State:</label>
+                    <input type="text" id="exp-dec-state" class="form-control" value="Build step failed with missing header <vulkan/vulkan.h>.">
+                  </div>
+                  <div class="form-group">
+                    <label>Instructions:</label>
+                    <input type="text" id="exp-dec-inst" class="form-control" value="Select the most appropriate next recovery action.">
+                  </div>
+                  <div class="form-group">
+                    <label>Candidate A:</label>
+                    <input type="text" id="exp-dec-c1" class="form-control" value="Install Vulkan SDK package">
+                  </div>
+                  <div class="form-group">
+                    <label>Candidate B:</label>
+                    <input type="text" id="exp-dec-c2" class="form-control" value="Delete the source file">
+                  </div>
+                  <button class="btn btn-primary" onclick="runExplorerDecision()">Run OpenJev Contract</button>
+                </div>
+                <div class="col-6">
+                  <label>Strict Contract Result:</label>
+                  <div id="explorer-decision-result" class="code-result-box" style="min-height: 220px;">Ready.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Image Explorer -->
+            <div id="explorer-image" class="explorer-tab-body">
+              <div class="section-row">
+                <div class="col-6">
+                  <div class="form-group">
+                    <label>Prompt:</label>
+                    <textarea id="exp-img-prompt" class="form-control" rows="3">A high-tech local AI server glowing with blue neon lights, cinematic lighting</textarea>
+                  </div>
+                  <div class="form-group">
+                    <label>Size:</label>
+                    <select id="exp-img-size" class="form-control">
+                      <option value="512x512">512x512 (Fast)</option>
+                      <option value="768x768">768x768</option>
+                      <option value="1024x1024" selected>1024x1024 (Default)</option>
+                    </select>
+                  </div>
+                  <button class="btn btn-primary" onclick="runExplorerImage()">Generate with stable-diffusion.cpp</button>
+                </div>
+                <div class="col-6">
+                  <label>Generated Output:</label>
+                  <div id="explorer-image-result" class="image-preview-box">
+                    <span class="text-muted">No image generated yet.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 9. API Keys Page -->
+        <section id="page-keys" class="view-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>Authorized API Keys</h3>
+              <button class="btn btn-primary btn-sm" onclick="showCreateKeyModal()">+ Create New Key</button>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" id="keys-table">
+                <thead>
+                  <tr>
+                    <th>Key ID</th>
+                    <th>Name</th>
+                    <th>Permissions</th>
+                    <th>Created</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 10. System & Doctor Page -->
+        <section id="page-system" class="view-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>System Diagnostics & hcs doctor</h3>
+              <button class="btn btn-primary btn-sm" onclick="runDoctorCheck()">Re-run Diagnostics</button>
+            </div>
+            <div id="doctor-results-list" class="p-3"></div>
+          </div>
+        </section>
+
+        <!-- 11. Benchmarks Page -->
+        <section id="page-benchmark" class="view-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>Performance & Token Throughput Benchmarks</h3>
+              <button class="btn btn-primary btn-sm" onclick="runBenchmark()">Run Smoke Benchmark</button>
+            </div>
+            <div id="benchmark-results" class="p-3">
+              <p class="text-muted">Click "Run Smoke Benchmark" to test prefill, decode speed, and token latency across active models.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 12. Live Logs Page -->
+        <section id="page-logs" class="view-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>Real-Time Event Stream (SSE)</h3>
+              <button class="btn btn-secondary btn-sm" onclick="clearLiveLogs()">Clear Window</button>
+            </div>
+            <div id="live-logs-container" class="terminal-log-box"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

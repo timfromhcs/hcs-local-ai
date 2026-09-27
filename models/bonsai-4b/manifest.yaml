@@ -1,0 +1,24 @@
+id: hcs-general
+source_repository: prism-ml/Ternary-Bonsai-4B-gguf
+source_revision: main
+filename: Ternary-Bonsai-4B-PQ2_0.gguf
+size_bytes: 1074969344
+sha256: deferred-to-run
+backend: prism
+platform: windows-x64, linux-x64
+capabilities:
+  - general_reasoning
+  - planning
+  - chat
+  - summarization
+  - memory_synthesis
+  - moderate_reasoning
+  - coding_small_medium
+context: 8192
+quantization: PQ2_0
+mtp: false
+mmproj: null
+dependencies: []
+license: apache-2.0
+license_checked_at: 2026-09-27T20:17:00Z
+verification_status: verified_local

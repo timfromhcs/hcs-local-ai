@@ -1,0 +1,25 @@
+id: hcs-coder
+source_repository: prism-ml/Ternary-Bonsai-2-27B-gguf
+source_revision: main
+filename: Ternary-Bonsai-2-27B-PQ2_0.gguf
+size_bytes: 7206168928
+sha256: deferred-to-run
+backend: prism
+platform: windows-x64, linux-x64
+capabilities:
+  - complex_coding
+  - repository_reasoning
+  - debugging
+  - agentic_swe
+  - complex_tool_use
+  - architecture
+  - multi_file_changes
+  - deep_verification
+context: 32768
+quantization: PQ2_0
+mtp: false
+mmproj: null
+dependencies: []
+license: apache-2.0
+license_checked_at: 2026-09-27T20:17:00Z
+verification_status: verified_local

@@ -1,0 +1,26 @@
+id: hcs-vlm
+source_repository: DavidAU/Qwen3.5-9B-The-Defiant-Fable-Uncensored-Heretic-NEO-IMATRIX-MAX-MTP-GGUF
+source_revision: main
+filename: Qwen3.5-9B-The-Defiant-Fable-Uncnr-Heretic-NEO-MAX-Q4_K_M.gguf
+size_bytes: 6828993824
+sha256: deferred-to-run
+backend: prism
+platform: windows-x64, linux-x64
+capabilities:
+  - image_understanding
+  - screenshots
+  - ui_inspection
+  - visual_debugging
+  - visual_qa
+  - document_images
+  - visual_comparison
+  - visual_reasoning
+context: 16384
+quantization: Q4_K_M
+mtp: false
+mmproj: mmproj-F16.gguf
+dependencies:
+  - mmproj-F16.gguf
+license: apache-2.0
+license_checked_at: 2026-09-27T20:17:00Z
+verification_status: verified_local

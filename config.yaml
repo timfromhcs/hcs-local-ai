@@ -1,0 +1,55 @@
+server:
+  host: "127.0.0.1"
+  port: 8787
+  dashboard: true
+  cors_allow_all: true
+
+resources:
+  max_heavy_active: 1
+  system_reserve_mb: 2048
+  emergency_reserve_mb: 1024
+  flash_attention: "auto"
+  kv_cache_type: "balanced"
+
+models:
+  subagent:
+    id: "hcs-subagent"
+    context: 4096
+    gpu_layers: 99
+    flash_attn: "auto"
+  general:
+    id: "hcs-general"
+    context: 8192
+    gpu_layers: 99
+    flash_attn: "auto"
+  coder:
+    id: "hcs-coder"
+    context: 8192
+    gpu_layers: 99
+    flash_attn: "auto"
+  judge:
+    id: "hcs-judge"
+    context: 4096
+    gpu_layers: 99
+    flash_attn: "auto"
+  vlm:
+    id: "hcs-vlm"
+    context: 4096
+    gpu_layers: 32
+    flash_attn: "auto"
+  image:
+    id: "hcs-image"
+    width: 512
+    height: 512
+    steps: 4
+
+watchdog:
+  health_check_interval_secs: 5
+  max_crashes_before_quarantine: 3
+  recovery_timeout_secs: 180
+
+storage:
+  models_dir: "./models"
+  runtime_dir: "./runtime"
+  artifacts_dir: "./artifacts"
+  database_path: "./hcs.db"

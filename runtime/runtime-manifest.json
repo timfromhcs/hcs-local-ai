@@ -1,0 +1,32 @@
+{
+  "platform": "windows-x64",
+  "generated_at": "2026-09-27T20:17:00Z",
+  "runtimes": [
+    {
+      "name": "prism",
+      "binary_path": "runtime/windows-x64/prism/llama-server.exe",
+      "version": "0.2.0-dev (build 10743, commit adfffbe41)",
+      "commit": "adfffbe41",
+      "build_number": 10743,
+      "sha256": "deferred-to-run",
+      "platform": "windows-x64",
+      "architecture": "x64",
+      "backend": "prism-vulkan",
+      "vulkan_capable": true,
+      "compiler": "MSVC 19.51.36257.0"
+    },
+    {
+      "name": "stable-diffusion-cpp",
+      "binary_path": "runtime/windows-x64/sd-cpp/sd-cli.exe",
+      "server_binary_path": "runtime/windows-x64/sd-cpp/sd-server.exe",
+      "version": "sd-master-42ab1c1",
+      "commit": "42ab1c1",
+      "sha256": "deferred-to-run",
+      "platform": "windows-x64",
+      "architecture": "x64",
+      "backend": "stable-diffusion-vulkan",
+      "vulkan_capable": true,
+      "compiler": "MSVC x64"
+    }
+  ]
+}

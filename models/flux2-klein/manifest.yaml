@@ -1,0 +1,25 @@
+id: hcs-image
+source_repository: Aatricks/bonsai-image-ternary-4B-FLUX2-klein-GGUF
+source_revision: main
+filename: bonsai-flux2-klein-ternary-q2_k.gguf
+size_bytes: 1361094080
+sha256: deferred-to-run
+backend: stable-diffusion-cpp
+platform: windows-x64, linux-x64
+capabilities:
+  - text_to_image
+  - image_to_image
+  - image_editing
+  - reference_image_editing
+  - local_artifact_generation
+context: null
+quantization: Q2_K
+mtp: false
+mmproj: null
+dependencies:
+  - Qwen3-4B-Q4_K_M.gguf
+  - full_encoder_small_decoder.safetensors
+  - small_decoder.safetensors
+license: apache-2.0
+license_checked_at: 2026-09-27T20:17:00Z
+verification_status: verified_local
