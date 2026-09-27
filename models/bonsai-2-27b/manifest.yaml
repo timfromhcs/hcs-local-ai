@@ -15,7 +15,7 @@ capabilities:
   - architecture
   - multi_file_changes
   - deep_verification
-context: 32768
+context: 8192
 quantization: PQ2_0
 mtp: false
 mmproj: null

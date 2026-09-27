@@ -103,7 +103,7 @@ impl AppState {
 
         let prism_bin = self.config.storage.runtime_dir.join("windows-x64/prism/llama-server.exe");
         let mmproj_path = model_info.manifest.mmproj.as_ref().map(|f| model_info.directory.join(f));
-        let ctx_len = model_info.manifest.context.unwrap_or(4096);
+        let ctx_len = std::cmp::min(model_info.manifest.context.unwrap_or(4096), if is_heavy { 4096 } else { 8192 });
         let flash_attn = &self.config.resources.flash_attention;
         let gpu_layers = if model_id == "hcs-vlm" { 32 } else { 99 };
         let threads = self.config.resources.threads;

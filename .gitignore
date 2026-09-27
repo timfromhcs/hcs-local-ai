@@ -52,3 +52,6 @@ Thumbs.db
 agent_verified.txt
 test_vlm.py
 test_agent.py
+__pycache__/
+*.pyc
+
