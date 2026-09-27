@@ -53,7 +53,7 @@ class TestSuite:
 ts = TestSuite()
 
 print("======================================================================")
-print("              HCS LOCAL AI v1.0.0 — COMPREHENSIVE STRESS TEST         ")
+print("              HCS LOCAL AI v1.0.1 — COMPREHENSIVE STRESS TEST         ")
 print("======================================================================")
 
 # 1. Health & Doctor API

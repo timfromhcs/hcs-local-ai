@@ -80,7 +80,19 @@ pub async fn chat_completions(
     Json(mut payload): Json<ChatCompletionRequest>,
 ) -> Result<Response, (StatusCode, Json<Value>)> {
     let start_time = Instant::now();
-    let target_model_id = state.registry.resolve_alias(&payload.model);
+    let target_model_id = if payload.model.to_lowercase() == "auto" || payload.model.is_empty() {
+        let last_prompt = payload.messages.last()
+            .and_then(|m| m.get("content"))
+            .and_then(|c| c.as_str())
+            .unwrap_or("");
+        let pipeline = crate::openjev_pipeline::JevDelegationPipeline::new(std::sync::Arc::new(state.clone()));
+        match pipeline.decide_model(last_prompt).await {
+            Ok(del) => del.selected_model,
+            Err(_) => state.registry.resolve_alias(&payload.model),
+        }
+    } else {
+        state.registry.resolve_alias(&payload.model)
+    };
     let is_streaming = payload.stream;
 
     // Check if worker is ready, or start it
@@ -167,11 +179,28 @@ pub async fn chat_completions(
         let latency_ms = start_time.elapsed().as_millis() as u64;
         let mut prompt_tokens = 0;
         let mut completion_tokens = 0;
-
-        if let Ok(json_resp) = serde_json::from_slice::<Value>(&body_bytes) {
+        let mut final_body = body_bytes;
+        if let Ok(mut json_resp) = serde_json::from_slice::<Value>(&final_body) {
             if let Some(usage) = json_resp.get("usage") {
                 prompt_tokens = usage.get("prompt_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
                 completion_tokens = usage.get("completion_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+            }
+            if let Some(choices) = json_resp.get_mut("choices").and_then(|c| c.as_array_mut()) {
+                if let Some(first_choice) = choices.first_mut() {
+                    if let Some(msg) = first_choice.get_mut("message") {
+                        let content_is_empty = msg.get("content").and_then(|c| c.as_str()).map(|s| s.trim().is_empty()).unwrap_or(true);
+                        if content_is_empty {
+                            if let Some(reasoning) = msg.get("reasoning_content").and_then(|r| r.as_str()) {
+                                if !reasoning.is_empty() {
+                                    msg["content"] = serde_json::json!(reasoning);
+                                    if let Ok(serialized) = serde_json::to_vec(&json_resp) {
+                                        final_body = bytes::Bytes::from(serialized);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -195,7 +224,7 @@ pub async fn chat_completions(
         Ok(Response::builder()
             .status(status)
             .header("Content-Type", "application/json")
-            .body(axum::body::Body::from(body_bytes))
+            .body(axum::body::Body::from(final_body))
             .unwrap())
     }
 }

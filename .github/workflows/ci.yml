@@ -1,0 +1,49 @@
+name: CI & Cloud Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  check-and-test:
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cargo Check
+        run: cargo check --verbose
+
+      - name: Run Unit Tests
+        run: cargo test --verbose
+
+      - name: Build Release Binary
+        run: cargo build --release --verbose
+
+      - name: Upload Windows Build Artifact
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hcs-daemon-windows-x64
+          path: target/release/hcs-daemon.exe
+
+      - name: Upload Linux Build Artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hcs-daemon-linux-x64
+          path: target/release/hcs-daemon

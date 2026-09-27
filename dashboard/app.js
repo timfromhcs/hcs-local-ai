@@ -40,6 +40,8 @@ function initNavigation() {
         routing: ["Smart Router", "Smallest-capable-model routing rules and validation"],
         tokens: ["Tokens & Telemetry", "Throughput, prompt cache metrics, and cost counters"],
         agent: ["Autonomous Agent", "Task graph, tool execution engine, and self-healing status"],
+        jspace: ["J-Space Workspace", "Multi-model shared session container and transcript history"],
+        brain: ["Persistent Brain", "Autonomous error learning, healing solutions, and recalled patterns"],
         memory: ["Persistent Memory", "SQLite durable knowledge store with provenance tracking"],
         explorer: ["API Explorer", "Interactive testing for OpenAI, Anthropic, and OpenJev endpoints"],
         keys: ["API Keys", "Bearer authentication tokens and capability permissions"],
@@ -56,6 +58,8 @@ function initNavigation() {
       // Load specific page data
       if (page === "models") loadModels();
       if (page === "requests") loadRequests();
+      if (page === "jspace") loadJSpaceSessions();
+      if (page === "brain") loadBrainInsights();
       if (page === "memory") loadMemory();
       if (page === "keys") loadKeys();
       if (page === "system") runDoctorCheck();
@@ -729,4 +733,127 @@ async function runBenchmark() {
   } catch (e) {
     container.innerHTML = `<span class="text-red">Benchmark error: ${e.message}</span>`;
   }
+}
+
+// J-Space Functions
+async function loadJSpaceSessions() {
+  const container = document.getElementById("jspace-sessions-list");
+  if (!container) return;
+  try {
+    const res = await fetch(`${API_BASE}/hcs/v2/jspace/sessions`);
+    const data = await res.json();
+    const sessions = data.sessions || [];
+    if (sessions.length === 0) {
+      container.innerHTML = `<p class="text-muted">No active J-Space sessions. Click "+ New Session" to create one.</p>`;
+      return;
+    }
+    container.innerHTML = `
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>TITLE</th>
+              <th>GOALS</th>
+              <th>TURNS</th>
+              <th>SHARED STATE KEYS</th>
+              <th>LAST ACCESSED</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sessions.map(s => `
+              <tr>
+                <td><code>${s.id}</code></td>
+                <td><strong>${s.title}</strong></td>
+                <td><span class="badge blue">${s.goal_count} goals</span></td>
+                <td>${s.turn_count} turns</td>
+                <td>${s.state_keys.map(k => `<span class="badge gray">${k}</span>`).join(' ') || '<span class="text-muted">none</span>'}</td>
+                <td>${new Date(s.last_accessed_at).toLocaleTimeString()}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    container.innerHTML = `<span class="text-red">Error loading J-Space: ${e.message}</span>`;
+  }
+}
+
+async function createJSpaceSessionPrompt() {
+  const title = prompt("Enter title for new J-Space session:", "Coding & Reasoning Session");
+  if (!title) return;
+  try {
+    const res = await fetch(`${API_BASE}/hcs/v2/jspace/sessions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, initial_goal: "Coordinate multi-model execution" })
+    });
+    if (res.ok) {
+      loadJSpaceSessions();
+    }
+  } catch (e) {
+    alert("Failed to create session: " + e.message);
+  }
+}
+
+// Persistent Brain Functions
+async function loadBrainInsights() {
+  const container = document.getElementById("brain-insights-list");
+  if (!container) return;
+  try {
+    const res = await fetch(`${API_BASE}/hcs/v2/brain/insights?limit=25`);
+    const data = await res.json();
+    renderBrainInsights(data.insights || []);
+  } catch (e) {
+    container.innerHTML = `<span class="text-red">Error loading Brain insights: ${e.message}</span>`;
+  }
+}
+
+async function searchBrainInsights() {
+  const q = document.getElementById("brain-search-input").value.trim();
+  const container = document.getElementById("brain-insights-list");
+  if (!container) return;
+  try {
+    const res = await fetch(`${API_BASE}/hcs/v2/brain/recall?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    renderBrainInsights(data.insights || []);
+  } catch (e) {
+    container.innerHTML = `<span class="text-red">Search failed: ${e.message}</span>`;
+  }
+}
+
+function renderBrainInsights(insights) {
+  const container = document.getElementById("brain-insights-list");
+  if (!container) return;
+  if (insights.length === 0) {
+    container.innerHTML = `<p class="text-muted">No insights recorded yet. Autonomous self-healing and tool executions will automatically deposit learned solutions here.</p>`;
+    return;
+  }
+  container.innerHTML = `
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>CATEGORY</th>
+            <th>PATTERN / PROBLEM</th>
+            <th>LEARNED SOLUTION</th>
+            <th>CONFIDENCE</th>
+            <th>APPLIED</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${insights.map(i => `
+            <tr>
+              <td><span class="badge blue">${i.category}</span></td>
+              <td><code>${i.pattern}</code></td>
+              <td><strong>${i.solution}</strong></td>
+              <td><span class="text-green">${(i.confidence * 100).toFixed(0)}%</span></td>
+              <td>${i.times_applied}x</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 }

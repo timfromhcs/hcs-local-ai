@@ -67,6 +67,18 @@ pub struct ArtifactRecord {
     pub created_at: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LearnedInsightRecord {
+    pub id: String,
+    pub category: String,
+    pub pattern: String,
+    pub solution: String,
+    pub confidence: f32,
+    pub times_applied: u32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 impl Database {
     pub fn init<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
         let conn = Connection::open(path)?;
@@ -146,6 +158,18 @@ impl Database {
                 metadata TEXT NOT NULL,
                 created_at TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS learned_insights (
+                id TEXT PRIMARY KEY,
+                category TEXT NOT NULL,
+                pattern TEXT NOT NULL,
+                solution TEXT NOT NULL,
+                confidence REAL NOT NULL DEFAULT 1.0,
+                times_applied INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_insights_cat ON learned_insights(category);
             "#,
         )?;
 
@@ -531,6 +555,74 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let count = conn.execute("DELETE FROM artifacts WHERE id = ?1", params![id])?;
         Ok(count > 0)
+    }
+
+    pub fn insert_learned_insight(&self, category: &str, pattern: &str, solution: &str, confidence: f32) -> anyhow::Result<String> {
+        let conn = self.conn.lock().unwrap();
+        let id = Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO learned_insights (id, category, pattern, solution, confidence, times_applied, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7)",
+            params![id, category, pattern, solution, confidence, now, now],
+        )?;
+        Ok(id)
+    }
+
+    pub fn find_learned_insights(&self, query: &str) -> anyhow::Result<Vec<LearnedInsightRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, category, pattern, solution, confidence, times_applied, created_at, updated_at
+             FROM learned_insights
+             WHERE pattern LIKE ?1 OR solution LIKE ?1 OR category LIKE ?1
+             ORDER BY confidence DESC, times_applied DESC
+             LIMIT 20"
+        )?;
+        let pattern = format!("%{}%", query);
+        let rows = stmt.query_map(params![pattern], |row| {
+            Ok(LearnedInsightRecord {
+                id: row.get(0)?,
+                category: row.get(1)?,
+                pattern: row.get(2)?,
+                solution: row.get(3)?,
+                confidence: row.get(4)?,
+                times_applied: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })?;
+        let mut list = Vec::new();
+        for r in rows {
+            list.push(r?);
+        }
+        Ok(list)
+    }
+
+    pub fn list_learned_insights(&self, limit: usize) -> anyhow::Result<Vec<LearnedInsightRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, category, pattern, solution, confidence, times_applied, created_at, updated_at
+             FROM learned_insights
+             ORDER BY updated_at DESC
+             LIMIT ?1"
+        )?;
+        let rows = stmt.query_map(params![limit as i64], |row| {
+            Ok(LearnedInsightRecord {
+                id: row.get(0)?,
+                category: row.get(1)?,
+                pattern: row.get(2)?,
+                solution: row.get(3)?,
+                confidence: row.get(4)?,
+                times_applied: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })?;
+        let mut list = Vec::new();
+        for r in rows {
+            list.push(r?);
+        }
+        Ok(list)
     }
 
     // Audit log

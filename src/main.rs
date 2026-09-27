@@ -1,11 +1,14 @@
 mod agent;
 mod api;
 mod backend;
+pub mod brain;
 mod config;
 mod db;
 mod doctor;
+pub mod j_space;
 mod models;
 mod openjev;
+pub mod openjev_pipeline;
 mod resource;
 mod telemetry;
 mod watchdog;
@@ -30,7 +33,7 @@ use watchdog::Watchdog;
 
 #[derive(Parser)]
 #[command(name = "hcs-daemon")]
-#[command(version = "1.0.0")]
+#[command(version)]
 #[command(about = "HCS Local AI unified daemon - OpenAI & Anthropic compatible API, Prism & SD.cpp Vulkan runtime orchestration")]
 struct Cli {
     #[arg(short, long, global = true)]
@@ -161,6 +164,9 @@ async fn main() -> anyhow::Result<()> {
 
             let (event_tx, _) = broadcast::channel(256);
 
+            let jspace = Arc::new(j_space::JSpaceManager::new(config.jspace.max_active_sessions));
+            let brain = Arc::new(brain::PersistentBrain::new(Arc::new(db.clone())));
+
             let state = api::AppState {
                 config: config.clone(),
                 db,
@@ -169,6 +175,8 @@ async fn main() -> anyhow::Result<()> {
                 telemetry,
                 watchdog,
                 agent,
+                jspace,
+                brain,
                 active_workers: Arc::new(Mutex::new(HashMap::new())),
                 sd_worker,
                 event_tx,
@@ -179,7 +187,7 @@ async fn main() -> anyhow::Result<()> {
             let listener = tokio::net::TcpListener::bind(&addr).await?;
 
             info!("============================================================");
-            info!("HCS Local AI Daemon v1.0.0 is running on http://{}", addr);
+            info!("HCS Local AI Daemon v{} is running on http://{}", env!("CARGO_PKG_VERSION"), addr);
             info!("• Dashboard:          http://{}/", addr);
             info!("• OpenAI API:         http://{}/v1", addr);
             info!("• Anthropic API:      http://{}/v1/messages", addr);

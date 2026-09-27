@@ -34,6 +34,8 @@ pub struct AppState {
     pub telemetry: TelemetryTracker,
     pub watchdog: Arc<Watchdog>,
     pub agent: Arc<AgentRuntime>,
+    pub jspace: Arc<crate::j_space::JSpaceManager>,
+    pub brain: Arc<crate::brain::PersistentBrain>,
     pub active_workers: Arc<Mutex<HashMap<String, PrismWorker>>>,
     pub sd_worker: Arc<StableDiffusionWorker>,
     pub event_tx: broadcast::Sender<String>,
@@ -103,6 +105,12 @@ impl AppState {
         let mmproj_path = model_info.manifest.mmproj.as_ref().map(|f| model_info.directory.join(f));
         let ctx_len = model_info.manifest.context.unwrap_or(4096);
         let flash_attn = &self.config.resources.flash_attention;
+        let gpu_layers = if model_id == "hcs-vlm" { 32 } else { 99 };
+        let threads = self.config.resources.threads;
+        let batch_size = self.config.resources.batch_size;
+        let ubatch_size = self.config.resources.ubatch_size;
+        let cache_type_k = &self.config.resources.cache_type_k;
+        let cache_type_v = &self.config.resources.cache_type_v;
 
         let worker = PrismWorker::start(
             model_id,
@@ -111,7 +119,13 @@ impl AppState {
             mmproj_path.as_deref(),
             port,
             ctx_len,
+            gpu_layers,
+            threads,
+            batch_size,
+            ubatch_size,
             flash_attn,
+            cache_type_k,
+            cache_type_v,
         ).await?;
 
         if is_heavy {
@@ -175,6 +189,18 @@ pub fn create_router(state: AppState) -> Router {
         .route("/hcs/v1/keys", get(hcs::list_keys).post(hcs::create_key))
         .route("/hcs/v1/keys/{id}/revoke", post(hcs::revoke_key))
         .route("/hcs/v1/events", get(hcs::live_events))
+
+        // HCS v2 routes (J-Space, Jev Delegation, Brain Auto-Learning, Hardware)
+        .route("/hcs/v2/jspace/sessions", get(hcs::list_jspace_sessions).post(hcs::create_jspace_session))
+        .route("/hcs/v2/jspace/sessions/{id}", get(hcs::get_jspace_session).delete(hcs::delete_jspace_session))
+        .route("/hcs/v2/jspace/sessions/{id}/state", post(hcs::set_jspace_state))
+        .route("/hcs/v2/jspace/sessions/{id}/turns", post(hcs::append_jspace_turn))
+        .route("/hcs/v2/jev/delegate", post(hcs::jev_delegate))
+        .route("/hcs/v2/jev/rate_plan", post(hcs::jev_rate_plan))
+        .route("/hcs/v2/brain/learn", post(hcs::brain_learn))
+        .route("/hcs/v2/brain/recall", get(hcs::brain_recall))
+        .route("/hcs/v2/brain/insights", get(hcs::brain_insights))
+        .route("/hcs/v2/hardware/profile", get(hcs::hardware_profile))
 
         // Static routes for artifacts and dashboard UI
         .nest_service("/artifacts", ServeDir::new(artifacts_dir))

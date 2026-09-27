@@ -8,8 +8,17 @@ resources:
   max_heavy_active: 1
   system_reserve_mb: 2048
   emergency_reserve_mb: 1024
-  flash_attention: "auto"
-  kv_cache_type: "balanced"
+  flash_attention: "on"
+  kv_cache_type: "q8_0"
+  cache_type_k: "q8_0"
+  cache_type_v: "q8_0"
+  threads: 8
+  batch_size: 1024
+  ubatch_size: 256
+
+jspace:
+  max_active_sessions: 64
+  session_ttl_secs: 86400
 
 models:
   subagent:

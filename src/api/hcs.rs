@@ -55,7 +55,7 @@ pub async fn system_info(State(state): State<AppState>) -> Json<Value> {
 
     Json(serde_json::json!({
         "status": "healthy",
-        "version": "1.0.0",
+        "version": env!("CARGO_PKG_VERSION"),
         "hardware": {
             "platform": std::env::consts::OS,
             "arch": std::env::consts::ARCH,
@@ -409,3 +409,237 @@ pub async fn live_events(State(state): State<AppState>) -> Sse<impl Stream<Item 
 
     Sse::new(stream).keep_alive(axum::response::sse::KeepAlive::new().interval(Duration::from_secs(10)))
 }
+
+// ============================================================================
+// HCS v2.0.0 Endpoints (J-Space, Jev Delegation Pipeline, Brain Auto-Learning)
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+pub struct CreateJSpaceRequest {
+    pub title: Option<String>,
+    pub initial_goal: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SetJSpaceStateRequest {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AppendJSpaceTurnRequest {
+    pub role: String,
+    pub model: String,
+    pub content: String,
+    pub tool_calls: Option<Value>,
+    pub tool_results: Option<Value>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct JevDelegateRequest {
+    pub prompt: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct JevRatePlanRequest {
+    pub goal: String,
+    pub plans: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BrainLearnRequest {
+    pub category: String,
+    pub pattern: String,
+    pub solution: String,
+    pub confidence: Option<f32>,
+}
+
+// POST /hcs/v2/jspace/sessions
+pub async fn create_jspace_session(
+    State(state): State<AppState>,
+    Json(req): Json<CreateJSpaceRequest>,
+) -> Json<Value> {
+    let session = state.jspace.create_session(req.title);
+    if let Some(goal) = req.initial_goal {
+        state.jspace.add_goal(&session.id, &goal);
+    }
+    let refreshed = state.jspace.get_session(&session.id).unwrap_or(session);
+    Json(serde_json::to_value(refreshed).unwrap())
+}
+
+// GET /hcs/v2/jspace/sessions
+pub async fn list_jspace_sessions(State(state): State<AppState>) -> Json<Value> {
+    let sessions = state.jspace.list_sessions();
+    Json(serde_json::json!({ "sessions": sessions, "count": sessions.len() }))
+}
+
+// GET /hcs/v2/jspace/sessions/:id
+pub async fn get_jspace_session(
+    State(state): State<AppState>,
+    AxPath(id): AxPath<String>,
+) -> Result<Json<Value>, StatusCode> {
+    if let Some(session) = state.jspace.get_session(&id) {
+        Ok(Json(serde_json::to_value(session).unwrap()))
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+
+// POST /hcs/v2/jspace/sessions/:id/state
+pub async fn set_jspace_state(
+    State(state): State<AppState>,
+    AxPath(id): AxPath<String>,
+    Json(req): Json<SetJSpaceStateRequest>,
+) -> Result<Json<Value>, StatusCode> {
+    if state.jspace.set_shared_state(&id, &req.key, &req.value) {
+        Ok(Json(serde_json::json!({ "success": true, "session_id": id, "key": req.key })))
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+
+// POST /hcs/v2/jspace/sessions/:id/turns
+pub async fn append_jspace_turn(
+    State(state): State<AppState>,
+    AxPath(id): AxPath<String>,
+    Json(req): Json<AppendJSpaceTurnRequest>,
+) -> Result<Json<Value>, StatusCode> {
+    let turn = crate::j_space::JSpaceTurn {
+        role: req.role,
+        model: req.model,
+        content: req.content,
+        tool_calls: req.tool_calls,
+        tool_results: req.tool_results,
+        timestamp: chrono::Utc::now(),
+    };
+    if state.jspace.append_turn(&id, turn) {
+        Ok(Json(serde_json::json!({ "success": true, "session_id": id })))
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+
+// DELETE /hcs/v2/jspace/sessions/:id
+pub async fn delete_jspace_session(
+    State(state): State<AppState>,
+    AxPath(id): AxPath<String>,
+) -> Json<Value> {
+    let ok = state.jspace.delete_session(&id);
+    Json(serde_json::json!({ "deleted": ok, "id": id }))
+}
+
+// POST /hcs/v2/jev/delegate
+pub async fn jev_delegate(
+    State(state): State<AppState>,
+    Json(req): Json<JevDelegateRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let pipeline = crate::openjev_pipeline::JevDelegationPipeline::new(std::sync::Arc::new(state.clone()));
+    match pipeline.decide_model(&req.prompt).await {
+        Ok(result) => Ok(Json(serde_json::to_value(result).unwrap())),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": { "message": e.to_string() } })),
+        )),
+    }
+}
+
+// POST /hcs/v2/jev/rate_plan
+pub async fn jev_rate_plan(
+    State(state): State<AppState>,
+    Json(req): Json<JevRatePlanRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let contract = crate::openjev_pipeline::JevNormalizer::prepare_plan_rating_contract(&req.goal, &req.plans);
+    if let Err(e) = contract.validate() {
+        return Err((StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": { "message": e.to_string() } }))));
+    }
+
+    let prompt_rendered = contract.render_prompt();
+    let judge_port = match state.ensure_worker("hcs-judge").await {
+        Ok(p) => p,
+        Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": { "message": e.to_string() } })))),
+    };
+
+    let client = reqwest::Client::new();
+    let resp = match client.post(format!("http://127.0.0.1:{}/completion", judge_port))
+        .json(&serde_json::json!({
+            "prompt": prompt_rendered,
+            "temperature": 0.0,
+            "n_predict": 4,
+            "stop": ["\n", "}", "]"]
+        }))
+        .send()
+        .await {
+            Ok(r) => r,
+            Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": { "message": e.to_string() } })))),
+        };
+
+    let res_json: Value = resp.json().await.unwrap_or_default();
+    let raw_output = res_json.get("content").and_then(|v| v.as_str()).unwrap_or("A");
+    let decision = contract.parse_output(raw_output);
+
+    Ok(Json(serde_json::json!({
+        "goal": req.goal,
+        "selected_plan": decision.selected_id,
+        "selected_label": decision.selected_label,
+        "raw_output": raw_output,
+        "decision": decision
+    })))
+}
+
+// POST /hcs/v2/brain/learn
+pub async fn brain_learn(
+    State(state): State<AppState>,
+    Json(req): Json<BrainLearnRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let conf = req.confidence.unwrap_or(0.95);
+    match state.brain.learn(&req.category, &req.pattern, &req.solution, conf) {
+        Ok(report) => Ok(Json(serde_json::to_value(report).unwrap())),
+        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": { "message": e.to_string() } })))),
+    }
+}
+
+// GET /hcs/v2/brain/recall
+pub async fn brain_recall(
+    State(state): State<AppState>,
+    Query(params): Query<crate::api::hcs::MemoryQuery>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let q = params.q.unwrap_or_default();
+    match state.brain.recall(&q) {
+        Ok(records) => Ok(Json(serde_json::json!({ "insights": records, "query": q, "count": records.len() }))),
+        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": { "message": e.to_string() } })))),
+    }
+}
+
+// GET /hcs/v2/brain/insights
+pub async fn brain_insights(
+    State(state): State<AppState>,
+    Query(params): Query<crate::api::hcs::MemoryQuery>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let limit = params.limit.unwrap_or(20);
+    match state.brain.list_recent(limit) {
+        Ok(records) => Ok(Json(serde_json::json!({ "insights": records, "count": records.len() }))),
+        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": { "message": e.to_string() } })))),
+    }
+}
+
+// GET /hcs/v2/hardware/profile
+pub async fn hardware_profile(State(state): State<AppState>) -> Json<Value> {
+    let stats = state.resource.get_stats();
+    Json(serde_json::json!({
+        "version": "2.0.0",
+        "cpu_threads": state.config.resources.threads,
+        "batch_size": state.config.resources.batch_size,
+        "ubatch_size": state.config.resources.ubatch_size,
+        "kv_cache_k": state.config.resources.cache_type_k,
+        "kv_cache_v": state.config.resources.cache_type_v,
+        "flash_attention": state.config.resources.flash_attention,
+        "continuous_batching": true,
+        "vulkan_acceleration": true,
+        "unified_memory_total_mb": stats.total_memory_mb,
+        "unified_memory_used_mb": stats.used_memory_mb,
+        "unified_memory_available_mb": stats.available_memory_mb,
+        "max_heavy_active": stats.max_heavy_active,
+        "active_heavy_count": stats.active_heavy_count,
+    }))
+}
+

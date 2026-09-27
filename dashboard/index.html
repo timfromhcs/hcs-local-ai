@@ -18,7 +18,7 @@
           <span class="logo-icon">⚡</span>
           <div class="logo-text">
             <span class="brand-title">HCS LOCAL AI</span>
-            <span class="brand-version">v1.0.0 • Vulkan</span>
+            <span class="brand-version">v2.0.0 • Vulkan Hardened</span>
           </div>
         </div>
       </div>
@@ -44,6 +44,12 @@
         <div class="nav-section-title">AGENT & MEMORY</div>
         <button class="nav-item" data-page="agent">
           <span class="nav-icon">🤖</span> Autonomous Agent
+        </button>
+        <button class="nav-item" data-page="jspace">
+          <span class="nav-icon">🌌</span> J-Space Sessions
+        </button>
+        <button class="nav-item" data-page="brain">
+          <span class="nav-icon">💡</span> Brain Auto-Learn
         </button>
         <button class="nav-item" data-page="memory">
           <span class="nav-icon">💾</span> Persistent Memory
@@ -499,6 +505,38 @@
             </div>
             <div id="benchmark-results" class="p-3">
               <p class="text-muted">Click "Run Smoke Benchmark" to test prefill, decode speed, and token latency across active models.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- J-Space Sessions View -->
+        <section id="page-jspace" class="view-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>🌌 J-Space Multi-Model Shared Workspace</h3>
+              <button class="btn btn-primary btn-sm" onclick="createJSpaceSessionPrompt()">+ New Session</button>
+            </div>
+            <div class="p-3">
+              <p class="text-muted">J-Space maintains an isolated, shared context for all models (subagent, general, coder, judge, vlm, image), tracking shared variables, active artifacts, and turn transcripts.</p>
+              <div id="jspace-sessions-list" style="margin-top: 15px;"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Brain Auto-Learning View -->
+        <section id="page-brain" class="view-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>💡 Persistent Brain & Auto-Learning</h3>
+              <button class="btn btn-secondary btn-sm" onclick="loadBrainInsights()">↻ Refresh</button>
+            </div>
+            <div class="p-3">
+              <p class="text-muted">The Persistent Brain stores learned fixes, tool failure recoveries, and programming conventions discovered during autonomous agent loops.</p>
+              <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <input type="text" id="brain-search-input" class="form-control" placeholder="Search learned solutions (e.g. Vulkan, compiler, fix)...">
+                <button class="btn btn-primary btn-sm" onclick="searchBrainInsights()">Search</button>
+              </div>
+              <div id="brain-insights-list" style="margin-top: 15px;"></div>
             </div>
           </div>
         </section>

@@ -20,9 +20,16 @@ impl PrismWorker {
         mmproj_path: Option<&Path>,
         port: u16,
         context_size: usize,
+        gpu_layers: u32,
+        threads: usize,
+        batch_size: usize,
+        ubatch_size: usize,
         flash_attn: &str,
+        cache_type_k: &str,
+        cache_type_v: &str,
     ) -> anyhow::Result<Self> {
-        info!("Starting Prism worker for {} on port {}...", model_id, port);
+        info!("Starting Prism worker for {} on port {} (threads: {}, batch: {}, KV: {}/{}, flash-attn: {})...",
+            model_id, port, threads, batch_size, cache_type_k, cache_type_v, flash_attn);
 
         let abs_bin = std::fs::canonicalize(runtime_bin)
             .unwrap_or_else(|_| runtime_bin.to_path_buf());
@@ -37,8 +44,15 @@ impl PrismWorker {
         cmd.arg("--host").arg("127.0.0.1");
         cmd.arg("--port").arg(port.to_string());
         cmd.arg("-c").arg(context_size.to_string());
-        cmd.arg("-ngl").arg("99"); // Vulkan GPU layers
+        cmd.arg("-ngl").arg(gpu_layers.to_string());
+        cmd.arg("-t").arg(threads.to_string());
+        cmd.arg("-tb").arg(threads.to_string());
+        cmd.arg("-b").arg(batch_size.to_string());
+        cmd.arg("-ub").arg(ubatch_size.to_string());
         cmd.arg("--flash-attn").arg(flash_attn);
+        cmd.arg("--cache-type-k").arg(cache_type_k);
+        cmd.arg("--cache-type-v").arg(cache_type_v);
+        cmd.arg("--cont-batching");
 
         if let Some(mmproj) = mmproj_path {
             if mmproj.exists() {
