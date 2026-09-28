@@ -43,14 +43,14 @@ impl ResourceManager {
         matches!(model_id, "hcs-coder" | "hcs-vlm" | "hcs-image")
     }
 
-    /// Accurate estimate of model RAM/VRAM footprint in MB (including 64k Q4_0 KV cache and compute buffers).
+    /// Accurate estimate of model RAM/VRAM footprint in MB (with smart offload and 32k/64k Q4_0 KV cache).
     pub fn estimate_model_memory_mb(model_id: &str) -> u64 {
         match model_id {
             "hcs-subagent" => 650,    // 248 MB weights + 64k Q4_0 KV cache + buffers
             "hcs-general"  => 2300,   // 1.07 GB weights + 64k Q4_0 KV cache + buffers
             "hcs-judge"    => 3900,   // 2.7 GB weights + 64k Q4_0 KV cache + buffers
-            "hcs-coder"    => 11200,  // 7.2 GB weights + 64k Q4_0 KV cache + buffers (fits in 12.5GB free UMA)
-            "hcs-vlm"      => 9600,   // 7.7 GB weights + 64k Q4_0 KV cache + mmproj + buffers
+            "hcs-coder"    => 7800,   // 7.2 GB weights + 32k Q4_0 KV cache + buffers (fits in 11GB+ UMA)
+            "hcs-vlm"      => 7500,   // 6.8 GB weights + 32k Q4_0 KV cache + mmproj + buffers
             "hcs-image"    => 4500,   // FLUX.2 Klein + Qwen3 encoder + VAE + buffers
             _              => 2000,
         }

@@ -132,8 +132,11 @@ impl AppState {
         let prism_bin = self.config.storage.runtime_dir.join("windows-x64/prism/llama-server.exe");
         let mmproj_path = model_info.manifest.mmproj.as_ref().map(|f| model_info.directory.join(f));
 
-        // 64k (65,536 tokens) Extended Context Window for all models with Q4_0 Unified KV Cache
-        let ctx_len = 65536;
+        // Smart Context Window: 32k for heavy models (hcs-coder, hcs-vlm), 64k for others
+        let ctx_len = match model_id {
+            "hcs-coder" | "hcs-vlm" => 32768,
+            _ => 65536,
+        };
         let cache_type_k = &self.config.resources.cache_type_k;
         let cache_type_v = &self.config.resources.cache_type_v;
 

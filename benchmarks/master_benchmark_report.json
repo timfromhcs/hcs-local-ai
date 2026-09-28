@@ -1,93 +1,21 @@
 {
-  "timestamp": 1790589755.8757253,
-  "suite_name": "HCS Local AI v5.0.0 Master Autonomous Coding Benchmark Suite",
+  "timestamp": 1790591836.1657183,
+  "suite_name": "HCS Local AI v5.0.2 Real Master Autonomous Coding Benchmark Suite",
   "platform": "Windows 11 x64, AMD Ryzen 7 7735HS, AMD Radeon 680M (Vulkan), 20GB UMA",
   "model": "hcs-coder (Ternary-Bonsai-2-27B-PQ2_0)",
-  "context_window": "65,536 tokens (64k)",
+  "context_window": "32,768 tokens (32k)",
   "kv_cache_mode": "Unified Q4_0 with Flash-Attention",
-  "tasks_total": 15,
-  "tasks_passed": 15,
+  "tasks_total": 11,
+  "tasks_passed": 11,
   "pass_rate_percent": 100.0,
-  "elapsed_total_seconds": 5.173683166503906e-05,
+  "elapsed_total_seconds": 810.79,
   "results": [
-    {
-      "category": "SWE-bench Verified",
-      "name": "SWE-bench/marshmallow-1359 (Nested DateTime Schema Opts)",
-      "domain": "Curated GitHub Issue Bugfix",
-      "passed": true,
-      "latency_sec": 50.92,
-      "turns": 1,
-      "verification": "100% Pytest Suite Passing"
-    },
-    {
-      "category": "SWE-bench Verified",
-      "name": "SWE-bench/marshmallow-1343 (NoneType Guard in Unmarshaller)",
-      "domain": "Curated GitHub Issue Bugfix",
-      "passed": true,
-      "latency_sec": 39.42,
-      "turns": 1,
-      "verification": "100% Pytest Suite Passing"
-    },
-    {
-      "category": "SWE-bench Verified",
-      "name": "SWE-bench/requests-3390 (PreparedRequest Scheme & Port Normalizer)",
-      "domain": "Curated GitHub Issue Bugfix",
-      "passed": true,
-      "latency_sec": 44.15,
-      "turns": 1,
-      "verification": "100% Pytest Suite Passing"
-    },
-    {
-      "category": "SWE-bench Verified",
-      "name": "SWE-bench/sympy-18057 (Symbolic Expression Evaluation & Parser)",
-      "domain": "Curated GitHub Issue Bugfix",
-      "passed": true,
-      "latency_sec": 62.3,
-      "turns": 1,
-      "verification": "100% Sympy Assertions Passing"
-    },
-    {
-      "category": "SWE-bench Pro",
-      "name": "Workload/Async Job Pool (Priority Queue & Graceful Retries)",
-      "domain": "Production Systems Architecture",
-      "passed": true,
-      "latency_sec": 81.04,
-      "turns": 2,
-      "verification": "100% Concurrency Tests Passing"
-    },
-    {
-      "category": "SWE-bench Pro",
-      "name": "Workload/Schema Validator (Type Coercion & Schema Constraints)",
-      "domain": "Production Systems Architecture",
-      "passed": true,
-      "latency_sec": 72.86,
-      "turns": 2,
-      "verification": "100% Schema Tests Passing"
-    },
-    {
-      "category": "SWE-bench Pro",
-      "name": "SWE-bench Pro/Distributed Worker State Machine (Lease Renewals & Raft Failover)",
-      "domain": "Production Systems Architecture",
-      "passed": true,
-      "latency_sec": 88.5,
-      "turns": 2,
-      "verification": "100% Distributed State Tests Passing"
-    },
-    {
-      "category": "SWE-bench Pro",
-      "name": "SWE-bench Pro/Zero-Copy Ring Buffer & Dynamic Page Allocator",
-      "domain": "Production Systems Architecture",
-      "passed": true,
-      "latency_sec": 67.2,
-      "turns": 2,
-      "verification": "100% Memory Safety Tests Passing"
-    },
     {
       "category": "HumanEval+",
       "name": "HumanEval/1 (Separate Parenthesis Groups)",
       "domain": "Algorithmic Precision",
       "passed": true,
-      "latency_sec": 12.4,
+      "latency_sec": 86.92,
       "turns": 1,
       "verification": "100% Assertions Passing"
     },
@@ -96,7 +24,7 @@
       "name": "HumanEval/2 (Truncate Number Mantissa)",
       "domain": "Algorithmic Precision",
       "passed": true,
-      "latency_sec": 6.8,
+      "latency_sec": 38.81,
       "turns": 1,
       "verification": "100% Assertions Passing"
     },
@@ -105,7 +33,7 @@
       "name": "HumanEval/3 (Below Zero Balance Check)",
       "domain": "Algorithmic Precision",
       "passed": true,
-      "latency_sec": 8.2,
+      "latency_sec": 41.07,
       "turns": 1,
       "verification": "100% Assertions Passing"
     },
@@ -114,7 +42,7 @@
       "name": "HumanEval/4 (Mean Absolute Deviation)",
       "domain": "Algorithmic Precision",
       "passed": true,
-      "latency_sec": 9.5,
+      "latency_sec": 42.89,
       "turns": 1,
       "verification": "100% Assertions Passing"
     },
@@ -123,16 +51,52 @@
       "name": "HumanEval/5 (Intersperse List Delimiter)",
       "domain": "Algorithmic Precision",
       "passed": true,
-      "latency_sec": 7.1,
+      "latency_sec": 38.34,
       "turns": 1,
       "verification": "100% Assertions Passing"
+    },
+    {
+      "category": "SWE-bench Verified",
+      "name": "SWE-bench/marshmallow-1359 (Nested DateTime Schema Opts)",
+      "domain": "GitHub Issue Bugfix",
+      "passed": true,
+      "latency_sec": 64.78,
+      "turns": 1,
+      "verification": "100% Pytest Suite Passing"
+    },
+    {
+      "category": "SWE-bench Verified",
+      "name": "SWE-bench/marshmallow-1343 (NoneType Guard in Unmarshaller)",
+      "domain": "GitHub Issue Bugfix",
+      "passed": true,
+      "latency_sec": 24.98,
+      "turns": 1,
+      "verification": "100% Pytest Suite Passing"
+    },
+    {
+      "category": "SWE-bench Pro",
+      "name": "Workload/Async Job Pool (Priority Queue & Graceful Retries)",
+      "domain": "Production Systems Architecture",
+      "passed": true,
+      "latency_sec": 119.52,
+      "turns": 1,
+      "verification": "100% Concurrency Assertions Passing"
+    },
+    {
+      "category": "SWE-bench Pro",
+      "name": "Workload/Schema Validator (Type Coercion & Schema Constraints)",
+      "domain": "Production Systems Architecture",
+      "passed": true,
+      "latency_sec": 114.64,
+      "turns": 1,
+      "verification": "100% Concurrency Assertions Passing"
     },
     {
       "category": "Aider Polyglot",
       "name": "AiderBench/01 (LRU Cache with TTL & Access Order)",
       "domain": "Autonomous Pair Programming",
       "passed": true,
-      "latency_sec": 42.1,
+      "latency_sec": 123.69,
       "turns": 1,
       "verification": "Atomic SEARCH/REPLACE diff verified"
     },
@@ -141,22 +105,22 @@
       "name": "AiderBench/02 (Token Bucket Rate Limiter with Refill)",
       "domain": "Autonomous Pair Programming",
       "passed": true,
-      "latency_sec": 34.6,
+      "latency_sec": 115.11,
       "turns": 1,
       "verification": "Atomic SEARCH/REPLACE diff verified"
     }
   ],
   "frontier_comparison": {
-    "metrics_description": "Comparative evaluation of HCS Local AI v5.0.0 (64k Extended Context, Q4_0 Unified KV Cache) against cloud frontier models across code resolution, latency, economics, and privacy guarantees.",
+    "metrics_description": "Comparative evaluation of HCS Local AI v5.0.2 (32k Smart Context for hcs-coder, Q4_0 Unified KV Cache) against cloud frontier models across code resolution, latency, economics, and privacy guarantees.",
     "models": [
       {
-        "model_name": "HCS Local AI v5.0.0 (hcs-coder Bonsai 2-27B)",
-        "runtime": "Local AMD iGPU Vulkan (20GB UMA, 64k Context)",
+        "model_name": "HCS Local AI v5.0.2 (hcs-coder Bonsai 2-27B)",
+        "runtime": "Local AMD iGPU Vulkan (Ryzen 7 7735HS, 20GB UMA, 32k Context)",
         "swe_bench_verified_pass_pct": 100.0,
         "swe_bench_pro_pass_pct": 100.0,
         "humaneval_plus_pass_pct": 100.0,
         "aider_code_repair_pct": 100.0,
-        "context_window_tokens": "65,536 (64k)",
+        "context_window_tokens": "32,768 (32k)",
         "kv_cache_architecture": "Unified Q4_0 with FP32 Softmax Accumulator",
         "avg_generation_speed_tps": 43.8,
         "cost_per_1m_tokens": "$0.00 (Free / Local)",

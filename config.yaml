@@ -39,7 +39,7 @@ models:
     flash_attn: "on"
   coder:
     id: "hcs-coder"
-    context: 65536
+    context: 32768
     gpu_layers: 32
     flash_attn: "on"
   judge:
@@ -49,7 +49,7 @@ models:
     flash_attn: "on"
   vlm:
     id: "hcs-vlm"
-    context: 65536
+    context: 32768
     gpu_layers: 28
     flash_attn: "on"
   image:
