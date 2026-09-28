@@ -278,7 +278,7 @@ mod tests {
             id: "call_4".to_string(),
             name: "command_exec".to_string(),
             arguments: serde_json::json!({
-                "command": "cmd /c echo 42"
+                "command": "echo 42"
             }),
         };
         let cmd_res = executor.execute(&cmd_call).await;

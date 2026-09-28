@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ======================================================================
-echo           HCS Local AI v3.0.0 Stable - Starting Server
+echo           HCS Local AI v4.0.1 Stable - Starting Server
 echo ======================================================================
 echo.
 
@@ -58,7 +58,8 @@ echo ======================================================================
 echo  Dashboard:           http://127.0.0.1:8787/
 echo  OpenAI API:          http://127.0.0.1:8787/v1
 echo  Anthropic API:       http://127.0.0.1:8787/v1/messages
-echo  J-Space / Brain:     http://127.0.0.1:8787/hcs/v1/brain
+echo  J-Space / Decider:   http://127.0.0.1:8787/hcs/v2/jspace
+echo  HCS Aider CLI:       hcsaider (run in ANY directory!)
 echo ======================================================================
 echo.
 echo Opening browser dashboard...
