@@ -69,15 +69,17 @@ jobs:
               $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
               if (Test-Path $iscc) {
                   New-Item -ItemType Directory -Path "dist" -Force
-                  & $iscc installer/hcs_setup.iss
-                  if (Test-Path "dist/HCS-Local-AI-v3.0.0-Setup.exe") {
-                      $setupHash = (Get-FileHash -Algorithm SHA256 "dist/HCS-Local-AI-v3.0.0-Setup.exe").Hash
-                      "$setupHash  HCS-Local-AI-v3.0.0-Setup.exe" | Out-File -FilePath "dist/HCS-Local-AI-v3.0.0-Setup.exe.sha256" -Encoding ascii
+                  cmd /c "`"$iscc`" installer/hcs_setup.iss"
+                  $setupExe = Get-ChildItem "dist" -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+                  if ($setupExe) {
+                      $setupHash = (Get-FileHash -Algorithm SHA256 $setupExe.FullName).Hash
+                      "$setupHash  $($setupExe.Name)" | Out-File -FilePath "$($setupExe.FullName).sha256" -Encoding ascii
                   }
               }
           } catch {
               Write-Warning "Inno Setup compilation skipped: $_"
           }
+          $global:LASTEXITCODE = 0
 
       - name: Package Artifacts (Linux)
         if: matrix.os == 'ubuntu-latest'

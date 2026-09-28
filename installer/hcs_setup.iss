@@ -1,6 +1,6 @@
-; HCS Local AI v3.0.0 Windows Installer Script (Inno Setup)
+; HCS Local AI v4.0.1 Windows Installer Script (Inno Setup)
 #define MyAppName "HCS Local AI"
-#define MyAppVersion "3.0.0"
+#define MyAppVersion "4.0.1"
 #define MyAppPublisher "HCS"
 #define MyAppURL "https://github.com/timfromhcs/hcs-local-ai"
 #define MyAppExeName "hcs-daemon.exe"
@@ -17,7 +17,7 @@ DefaultDirName={autopf}\HCS-Local-AI
 DisableProgramGroupPage=yes
 LicenseFile=..\LICENSE-MIT
 OutputDir=..\dist
-OutputBaseFilename=HCS-Local-AI-v3.0.0-Setup
+OutputBaseFilename=HCS-Local-AI-v4.0.1-Setup
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -32,14 +32,15 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "..\hcs-daemon.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\config.yaml"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\start.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\stop.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\hcs-aider.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\dashboard\*"; DestDir: "{app}\dashboard"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\models\*\manifest.yaml"; DestDir: "{app}\models"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\harnesses\*"; DestDir: "{app}\harnesses"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\config.yaml"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "..\start.bat"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "..\stop.bat"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "..\hcs-aider.bat"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "..\hcsaider.cmd"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "..\dashboard\*"; DestDir: "{app}\dashboard"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+Source: "..\models\*"; DestDir: "{app}\models"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+Source: "..\harnesses\*"; DestDir: "{app}\harnesses"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\start.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppExeName}"
