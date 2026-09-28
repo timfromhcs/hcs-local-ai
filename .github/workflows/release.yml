@@ -63,16 +63,20 @@ jobs:
           $hash = (Get-FileHash -Algorithm SHA256 "$pkgName.zip").Hash
           "$hash  $pkgName.zip" | Out-File -FilePath "$pkgName.zip.sha256" -Encoding ascii
 
-          # Install Inno Setup and compile 1-click Windows Installer .exe
-          choco install innosetup -y
-          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          if (Test-Path $iscc) {
-              New-Item -ItemType Directory -Path "dist" -Force
-              & $iscc installer/hcs_setup.iss
-              if (Test-Path "dist/HCS-Local-AI-v3.0.0-Setup.exe") {
-                  $setupHash = (Get-FileHash -Algorithm SHA256 "dist/HCS-Local-AI-v3.0.0-Setup.exe").Hash
-                  "$setupHash  HCS-Local-AI-v3.0.0-Setup.exe" | Out-File -FilePath "dist/HCS-Local-AI-v3.0.0-Setup.exe.sha256" -Encoding ascii
+          # Install Inno Setup and compile 1-click Windows Installer .exe if possible
+          try {
+              choco install innosetup -y --no-progress
+              $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+              if (Test-Path $iscc) {
+                  New-Item -ItemType Directory -Path "dist" -Force
+                  & $iscc installer/hcs_setup.iss
+                  if (Test-Path "dist/HCS-Local-AI-v3.0.0-Setup.exe") {
+                      $setupHash = (Get-FileHash -Algorithm SHA256 "dist/HCS-Local-AI-v3.0.0-Setup.exe").Hash
+                      "$setupHash  HCS-Local-AI-v3.0.0-Setup.exe" | Out-File -FilePath "dist/HCS-Local-AI-v3.0.0-Setup.exe.sha256" -Encoding ascii
+                  }
               }
+          } catch {
+              Write-Warning "Inno Setup compilation skipped: $_"
           }
 
       - name: Package Artifacts (Linux)
@@ -96,6 +100,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          fail_on_unmatched_files: false
           files: |
             *.zip
             *.zip.sha256
