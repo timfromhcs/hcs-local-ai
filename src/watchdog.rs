@@ -26,4 +26,38 @@ impl Watchdog {
             self.registry.update_state(model_id, ModelLifecycleState::Cold);
         }
     }
+
+    /// Background task that continuously monitors system memory.
+    /// If available RAM drops below emergency reserve, evicts largest worker to prevent PC freeze.
+    pub fn start_memory_guard(
+        resource: std::sync::Arc<crate::resource::ResourceManager>,
+        active_workers: std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, crate::backend::prism::PrismWorker>>>,
+        registry: ModelRegistry,
+    ) {
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(3));
+            loop {
+                interval.tick().await;
+                let avail_mb = resource.get_available_memory_mb();
+                let stats = resource.get_stats();
+                if avail_mb < stats.emergency_reserve_mb {
+                    warn!("WATCHDOG OOM ALERT: Free physical memory ({} MB) dropped below emergency reserve ({} MB)!", avail_mb, stats.emergency_reserve_mb);
+                    let mut workers = active_workers.lock().await;
+                    let to_evict: Option<String> = workers.keys()
+                        .max_by_key(|id| crate::resource::ResourceManager::estimate_model_memory_mb(id))
+                        .cloned();
+                    if let Some(id) = to_evict {
+                        error!("WATCHDOG: Forcefully evicting worker '{}' to safeguard OS stability", id);
+                        if let Some(mut worker) = workers.remove(&id) {
+                            worker.stop().await;
+                            if crate::resource::ResourceManager::is_heavy_model(&id) {
+                                resource.release_heavy_permit();
+                            }
+                            registry.update_state(&id, ModelLifecycleState::Cold);
+                        }
+                    }
+                }
+            }
+        });
+    }
 }

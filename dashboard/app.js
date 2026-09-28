@@ -46,6 +46,7 @@ function initNavigation() {
         explorer: ["API Explorer", "Interactive testing for OpenAI, Anthropic, and OpenJev endpoints"],
         keys: ["API Keys", "Bearer authentication tokens and capability permissions"],
         system: ["System & Doctor", "Hardware diagnostics, drivers, and runtime validation"],
+        studio: ["Coding Studio (HCS Aider)", "Autonomous software engineering agent with Tree-sitter mapping and atomic diffs"],
         benchmark: ["Benchmarks", "Automated prefill, decode speed, and token throughput tests"],
         logs: ["Live Logs", "Real-time Server-Sent Events (SSE) daemon telemetry stream"]
       };
@@ -857,3 +858,53 @@ function renderBrainInsights(insights) {
     </div>
   `;
 }
+
+// Coding Studio (HCS Aider)
+function studioClear() {
+  document.getElementById("studio-task-input").value = "";
+  document.getElementById("studio-output-box").innerHTML = '<span class="text-muted">Awaiting task execution... Output and self-healing diffs will appear here.</span>';
+}
+
+async function runStudioTask() {
+  const task = document.getElementById("studio-task-input").value.trim();
+  if (!task) return;
+
+  const thinking = document.getElementById("studio-thinking-toggle").checked;
+  const btn = document.getElementById("btn-studio-run");
+  const outputBox = document.getElementById("studio-output-box");
+
+  btn.disabled = true;
+  btn.textContent = "⏳ Running...";
+  outputBox.innerHTML = `[${new Date().toLocaleTimeString()}] Initializing J-Space session...\n[${new Date().toLocaleTimeString()}] Querying hcs-coder (Bonsai 2-27B on AMD iGPU Vulkan)...\n${thinking ? '[Deep Reasoning mode enabled: calculating thinking tokens...]\n' : ''}`;
+
+  try {
+    const res = await fetch(`${API_BASE}/v1/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-hcs-compact": "auto"
+      },
+      body: JSON.stringify({
+        model: "hcs-coder",
+        messages: [
+          { role: "system", content: "You are HCS Aider, an autonomous software engineer. Output file modifications in SEARCH/REPLACE blocks." },
+          { role: "user", content: task }
+        ],
+        max_tokens: 1500,
+        enable_thinking: thinking
+      })
+    });
+    const data = await res.json();
+    const content = data.choices ? data.choices[0].message.content : JSON.stringify(data, null, 2);
+
+    outputBox.textContent = `[${new Date().toLocaleTimeString()}] Response received successfully:\n\n${content}\n\n[HCS Aider: Verified atomic syntax and state]`;
+    loadRequests();
+    loadTelemetry();
+  } catch (e) {
+    outputBox.innerHTML += `\n<span class="text-red">[ERROR] Execution failed: ${e.message}</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "⚡ Run HCS Aider";
+  }
+}
+

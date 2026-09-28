@@ -137,6 +137,36 @@ impl JSpaceManager {
         }
     }
 
+    pub fn get_variables(&self, session_id: &str) -> Option<HashMap<String, String>> {
+        let map = self.sessions.read().unwrap();
+        map.get(session_id).map(|s| s.shared_state.clone())
+    }
+
+    pub fn set_variable(&self, session_id: &str, key: &str, value: &str) -> bool {
+        self.set_shared_state(session_id, key, value)
+    }
+
+    pub fn handover(&self, session_id: &str, from_model: &str, to_model: &str, context_delta: &str) -> bool {
+        let mut map = self.sessions.write().unwrap();
+        if let Some(session) = map.get_mut(session_id) {
+            let turn = JSpaceTurn {
+                role: "system".to_string(),
+                model: from_model.to_string(),
+                content: format!("[J-SPACE HANDOVER: {} -> {}]\n{}", from_model, to_model, context_delta),
+                tool_calls: None,
+                tool_results: None,
+                timestamp: Utc::now(),
+            };
+            session.turns.push(turn);
+            session.shared_state.insert("active_model".to_string(), to_model.to_string());
+            session.shared_state.insert("last_handover".to_string(), Utc::now().to_rfc3339());
+            session.last_accessed_at = Utc::now();
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn delete_session(&self, session_id: &str) -> bool {
         let mut map = self.sessions.write().unwrap();
         map.remove(session_id).is_some()
@@ -183,4 +213,33 @@ pub mod tests {
         assert!(mgr.delete_session(&s.id));
         assert!(mgr.get_session(&s.id).is_none());
     }
+
+    #[test]
+    fn test_jspace_handover_and_variables() {
+        let mgr = JSpaceManager::new(5);
+        let s = mgr.create_session(Some("Multi-Agent Session".to_string()));
+
+        // Set variables
+        assert!(mgr.set_variable(&s.id, "active_repo", "/workspace/repo"));
+        assert!(mgr.set_variable(&s.id, "git_branch", "feat/v3"));
+
+        let vars = mgr.get_variables(&s.id).unwrap();
+        assert_eq!(vars.get("active_repo").unwrap(), "/workspace/repo");
+        assert_eq!(vars.get("git_branch").unwrap(), "feat/v3");
+
+        // Handover from subagent to coder
+        let ok = mgr.handover(
+            &s.id,
+            "hcs-subagent",
+            "hcs-coder",
+            "# ACTIVE GOAL: Implement AST parser\n# STATE: 1 file modified",
+        );
+        assert!(ok);
+
+        let s_after = mgr.get_session(&s.id).unwrap();
+        assert_eq!(s_after.turns.len(), 1);
+        assert!(s_after.turns[0].content.contains("J-SPACE HANDOVER"));
+        assert_eq!(s_after.shared_state.get("active_model").unwrap(), "hcs-coder");
+    }
 }
+

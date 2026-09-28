@@ -18,7 +18,7 @@
           <span class="logo-icon">⚡</span>
           <div class="logo-text">
             <span class="brand-title">HCS LOCAL AI</span>
-            <span class="brand-version">v2.5.0 • Verified Stable</span>
+            <span class="brand-version">v3.0.0 • Verified Stable</span>
           </div>
         </div>
       </div>
@@ -42,6 +42,9 @@
         </button>
 
         <div class="nav-section-title">AGENT & MEMORY</div>
+        <button class="nav-item" data-page="studio">
+          <span class="nav-icon">💻</span> Coding Studio (Aider)
+        </button>
         <button class="nav-item" data-page="agent">
           <span class="nav-icon">🤖</span> Autonomous Agent
         </button>
@@ -541,8 +544,61 @@
           </div>
         </section>
 
+        <!-- Coding Studio (HCS Aider) View -->
+        <section id="page-studio" class="view-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>💻 HCS Aider — Coding Studio</h3>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <span class="badge badge-success">Bonsai 2-27B (Vulkan)</span>
+                <span class="badge badge-info" id="studio-compactor-badge">Auto-Compactor Active</span>
+              </div>
+            </div>
+            <div class="p-3">
+              <p class="text-muted">Autonomous repository-scale software engineering agent. Uses Tree-sitter repo mapping, atomic SEARCH/REPLACE diffing, and Persistent Brain self-healing.</p>
+
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-top: 15px;">
+                <div>
+                  <label><strong>Task or Bugfix Instruction:</strong></label>
+                  <textarea id="studio-task-input" class="form-control" rows="4" placeholder="e.g. In fields.py, fix DateTime._bind_to_schema so inner List fields inherit root opts without raising AttributeError."></textarea>
+                  
+                  <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                      <input type="checkbox" id="studio-thinking-toggle"> 
+                      <span>🧠 Deep Reasoning Mode (Thinking Budget)</span>
+                    </label>
+                    <div style="margin-left: auto; display: flex; gap: 8px;">
+                      <button class="btn btn-secondary btn-sm" onclick="studioClear()">Clear</button>
+                      <button class="btn btn-primary" id="btn-studio-run" onclick="runStudioTask()">⚡ Run HCS Aider</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label><strong>Agent & Environment State:</strong></label>
+                  <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; font-size: 0.85em; font-family: 'JetBrains Mono', monospace;">
+                    <div>Target Model: <span style="color: var(--accent-color);">hcs-coder (Bonsai 2-27B)</span></div>
+                    <div>Compactor: <span style="color: #10b981;">hcs-subagent (Bonsai 1.7B)</span></div>
+                    <div>KV Cache: <span>Q8_0 Compressed</span></div>
+                    <div>Vulkan UMA: <span id="studio-uma-status">Healthy</span></div>
+                    <div style="margin-top: 8px;">Session J-Space: <span id="studio-session-id">jspace-idle</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top: 20px;">
+                <h4>Real-Time Execution & Self-Healing Traces</h4>
+                <div id="studio-output-box" class="terminal-log-box" style="height: 250px;">
+                  <span class="text-muted">Awaiting task execution... Output and self-healing diffs will appear here.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- 12. Live Logs Page -->
         <section id="page-logs" class="view-panel">
+
           <div class="card">
             <div class="card-header">
               <h3>Real-Time Event Stream (SSE)</h3>

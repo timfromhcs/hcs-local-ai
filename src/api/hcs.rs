@@ -626,7 +626,7 @@ pub async fn brain_insights(
 pub async fn hardware_profile(State(state): State<AppState>) -> Json<Value> {
     let stats = state.resource.get_stats();
     Json(serde_json::json!({
-        "version": "2.0.0",
+        "version": "3.0.0",
         "cpu_threads": state.config.resources.threads,
         "batch_size": state.config.resources.batch_size,
         "ubatch_size": state.config.resources.ubatch_size,
@@ -642,4 +642,77 @@ pub async fn hardware_profile(State(state): State<AppState>) -> Json<Value> {
         "active_heavy_count": stats.active_heavy_count,
     }))
 }
+
+#[derive(Debug, Deserialize)]
+pub struct CompactContextApiRequest {
+    pub messages: Vec<serde_json::Value>,
+    pub preserve_recent: Option<usize>,
+}
+
+// POST /hcs/v2/compact
+pub async fn compact_context(
+    State(state): State<AppState>,
+    Json(req): Json<CompactContextApiRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let compactor = crate::context_compactor::ContextCompactor::new(std::sync::Arc::new(state.clone()));
+    let preserve = req.preserve_recent.unwrap_or(2);
+    match compactor.compact(&req.messages, preserve).await {
+        Ok(res) => Ok(Json(serde_json::to_value(res).unwrap())),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": { "message": e.to_string() } })),
+        )),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct JSpaceHandoverRequest {
+    pub from_model: String,
+    pub to_model: String,
+    pub context_delta: String,
+}
+
+// POST /hcs/v2/jspace/sessions/:id/handover
+pub async fn jspace_handover(
+    State(state): State<AppState>,
+    AxPath(id): AxPath<String>,
+    Json(req): Json<JSpaceHandoverRequest>,
+) -> Result<Json<Value>, StatusCode> {
+    if state.jspace.handover(&id, &req.from_model, &req.to_model, &req.context_delta) {
+        Ok(Json(serde_json::json!({ "success": true, "session_id": id })))
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SetVariableRequest {
+    pub key: String,
+    pub value: String,
+}
+
+// GET /hcs/v2/jspace/sessions/:id/variables
+pub async fn get_jspace_variables(
+    State(state): State<AppState>,
+    AxPath(id): AxPath<String>,
+) -> Result<Json<Value>, StatusCode> {
+    match state.jspace.get_variables(&id) {
+        Some(vars) => Ok(Json(serde_json::json!({ "variables": vars, "session_id": id }))),
+        None => Err(StatusCode::NOT_FOUND),
+    }
+}
+
+// POST /hcs/v2/jspace/sessions/:id/variables
+pub async fn set_jspace_variable(
+    State(state): State<AppState>,
+    AxPath(id): AxPath<String>,
+    Json(req): Json<SetVariableRequest>,
+) -> Result<Json<Value>, StatusCode> {
+    if state.jspace.set_variable(&id, &req.key, &req.value) {
+        Ok(Json(serde_json::json!({ "success": true, "session_id": id, "key": req.key })))
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+
 

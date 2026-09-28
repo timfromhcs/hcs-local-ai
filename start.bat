@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ======================================================================
-echo           HCS Local AI v2.5.0 Stable - Starting Server
+echo           HCS Local AI v3.0.0 Stable - Starting Server
 echo ======================================================================
 echo.
 

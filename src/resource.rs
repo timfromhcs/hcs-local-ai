@@ -43,6 +43,31 @@ impl ResourceManager {
         matches!(model_id, "hcs-coder" | "hcs-vlm" | "hcs-image")
     }
 
+    /// Accurate estimate of model RAM/VRAM footprint in MB (including KV cache and compute buffers).
+    pub fn estimate_model_memory_mb(model_id: &str) -> u64 {
+        match model_id {
+            "hcs-subagent" => 700,    // 248 MB weights + Q8_0 KV cache + buffers
+            "hcs-general"  => 1800,   // 1.07 GB weights + Q8_0 KV cache + buffers
+            "hcs-judge"    => 3200,   // 2.7 GB weights + Q8_0 KV cache + buffers
+            "hcs-coder"    => 8000,   // 7.2 GB weights + Q8_0 KV cache + buffers
+            "hcs-vlm"      => 8200,   // 6.8 GB weights + 0.9 GB mmproj + buffers
+            "hcs-image"    => 4500,   // FLUX.2 Klein + Qwen3 encoder + VAE + buffers
+            _              => 2000,
+        }
+    }
+
+    /// Optimal, crash-safe Vulkan GPU layer offloading for AMD iGPU (4GB AdapterRAM / 20GB shared UMA).
+    pub fn get_safe_gpu_layers(model_id: &str) -> u32 {
+        match model_id {
+            "hcs-subagent" => 99, // Tiny (248MB) - fits 100% in VRAM
+            "hcs-general"  => 99, // 1.07GB - fits safely in VRAM
+            "hcs-judge"    => 32, // Fits in ~2.5GB VRAM
+            "hcs-coder"    => 32, // Accelerates hot layers in VRAM, avoids AMD driver GTT thrashing
+            "hcs-vlm"      => 28, // Safely within VRAM limits alongside mmproj
+            _              => 32,
+        }
+    }
+
     pub fn get_stats(&self) -> SystemResourceStats {
         let mut sys = self.sys.lock().unwrap();
         sys.refresh_memory();
@@ -74,13 +99,63 @@ impl ResourceManager {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn check_memory_available(&self, estimated_need_mb: u64) -> bool {
+    pub fn get_available_memory_mb(&self) -> u64 {
         let mut sys = self.sys.lock().unwrap();
         sys.refresh_memory();
-        let avail_mb = sys.available_memory() / (1024 * 1024);
-        let required = estimated_need_mb + self.system_reserve_mb;
+        sys.available_memory() / (1024 * 1024)
+    }
+
+    /// Check if loading this model is safe under current system memory pressure.
+    pub fn check_memory_available(&self, estimated_need_mb: u64) -> bool {
+        let avail_mb = self.get_available_memory_mb();
+        let required = estimated_need_mb + self.emergency_reserve_mb;
         avail_mb >= required
+    }
+
+    /// Determine which active models MUST be evicted before loading `target_model`.
+    /// On a 20GB shared UMA system, we strictly enforce:
+    /// - Max 1 heavy model (coder, vlm, image) at any time.
+    /// - Heavy models evict all non-subagent models.
+    /// - If memory is tight, evict all other models including subagent.
+    pub fn determine_evictions_for_load(&self, target_model: &str, active_models: &[String]) -> Vec<String> {
+        let mut evict = Vec::new();
+        let is_target_heavy = Self::is_heavy_model(target_model);
+        let needed_mb = Self::estimate_model_memory_mb(target_model);
+        let avail_mb = self.get_available_memory_mb();
+
+        for active in active_models {
+            if active == target_model {
+                continue;
+            }
+
+            // 1. If loading a heavy model, evict all other heavy and medium models
+            if is_target_heavy {
+                if active != "hcs-subagent" {
+                    evict.push(active.clone());
+                }
+            } else if Self::is_heavy_model(active) {
+                // 2. If target is non-heavy, but an active model IS heavy, evict the heavy model
+                evict.push(active.clone());
+            } else if active != "hcs-subagent" && (active == "hcs-judge" || active == "hcs-general") {
+                // 3. For medium models (judge / general), avoid running both at once if memory is tight
+                if avail_mb < needed_mb + self.system_reserve_mb {
+                    evict.push(active.clone());
+                }
+            }
+        }
+
+        // 4. Extreme memory pressure check: If after planned evictions, memory is still
+        // dangerously low, also evict hcs-subagent
+        if active_models.contains(&"hcs-subagent".to_string()) && target_model != "hcs-subagent" {
+            let estimated_after_evict = avail_mb + evict.iter()
+                .map(|m| Self::estimate_model_memory_mb(m))
+                .sum::<u64>();
+            if estimated_after_evict < needed_mb + self.system_reserve_mb {
+                evict.push("hcs-subagent".to_string());
+            }
+        }
+
+        evict
     }
 
     pub async fn acquire_heavy_permit(&self) -> tokio::sync::OwnedSemaphorePermit {
@@ -120,9 +195,15 @@ mod tests {
         let stats2 = rm.get_stats();
         assert_eq!(stats2.active_heavy_count, 0);
 
-        // Check memory availability logic
-        let has_mem = rm.check_memory_available(100);
-        assert!(has_mem || !has_mem); // executes check_memory_available
+        // Check memory estimation and safe layer queries
+        assert_eq!(ResourceManager::get_safe_gpu_layers("hcs-coder"), 32);
+        assert_eq!(ResourceManager::get_safe_gpu_layers("hcs-subagent"), 99);
+        assert!(ResourceManager::estimate_model_memory_mb("hcs-coder") >= 7000);
+
+        // Check eviction logic: loading hcs-coder should evict hcs-judge
+        let active = vec!["hcs-judge".to_string(), "hcs-subagent".to_string()];
+        let evictions = rm.determine_evictions_for_load("hcs-coder", &active);
+        assert!(evictions.contains(&"hcs-judge".to_string()));
     }
 }
 

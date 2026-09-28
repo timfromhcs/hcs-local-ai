@@ -1,16 +1,17 @@
-# HCS Local AI v2.5.0 Stable
+# HCS Local AI v3.0.0 Stable
 
-[![Release](https://img.shields.io/badge/release-v2.5.0--stable-blue.svg)](https://github.com/timfromhcs/hcs-local-ai)
+[![Release](https://img.shields.io/badge/release-v3.0.0--stable-blue.svg)](https://github.com/timfromhcs/hcs-local-ai)
 [![CI](https://github.com/timfromhcs/hcs-local-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/timfromhcs/hcs-local-ai/actions/workflows/ci.yml)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64%20|%20Linux%20x64-lightgrey.svg)]()
 [![Hardware](https://img.shields.io/badge/Vulkan-AMD%20iGPU%20|%20Unified%20Memory-orange.svg)]()
-[![CLI Coding Benchmarks](https://img.shields.io/badge/CLI%20Coding%20Benchmarks-5%2F5%20passed%20(100%25)-brightgreen.svg)]()
+[![Memory Safety](https://img.shields.io/badge/Memory%20Safety-Smart%20Offload%20|%20OOM%20Guard-brightgreen.svg)]()
+[![Context Compactor](https://img.shields.io/badge/Context%20Compactor-hcs--subagent-blueviolet.svg)]()
+[![HCS Aider](https://img.shields.io/badge/Coding%20Agent-HCS%20Aider%20Studio-teal.svg)]()
 [![SWE-bench Lite & Workload](https://img.shields.io/badge/SWE--bench%20Lite%20%26%20Workload-4%2F4%20passed%20(100%25)-brightgreen.svg)]()
-[![Unit Tests](https://img.shields.io/badge/unit%20tests-15%2F15%20passed%20(100%25)-brightgreen.svg)]()
-[![E2E Stress Tests](https://img.shields.io/badge/stress%20tests-30%2F30%20passed%20(100%25)-brightgreen.svg)]()
+[![Unit Tests](https://img.shields.io/badge/unit%20tests-17%2F17%20passed%20(100%25)-brightgreen.svg)]()
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-green.svg)]()
 
-> **HCS Local AI v2.5.0 Stable** is an enterprise-hardened, local-first AI serving stack and autonomous agent orchestration daemon. It features **1-Click Windows execution (`start.bat` / `stop.bat`)**, verified **HumanEval & CLI Coding Benchmarks (100% pass rate)** and **SWE-bench Lite & Autonomous Workload Benchmarks (100% pass rate)** powered by **`hcs-coder` (Bonsai 2-27B)** on AMD iGPU Vulkan, the **Jev-Driven 3-Stage Smart Delegation Pipeline**, **J-Space** multi-model shared workspace contexts, **Persistent Brain** auto-learning loops, and **Vulkan Hardware Tuning** (Q8 KV cache compression, Flash Attention, continuous batching, and CPU thread reservation)—engineered natively for **AMD iGPU / Vulkan** environments within constrained 20–24 GB unified memory architectures.
+> **HCS Local AI v3.0.0 Stable** is an enterprise-hardened, local-first AI serving stack and autonomous software engineering environment. Engineered specifically for **AMD iGPU (Vulkan) within constrained 20–24 GB Unified Memory Architectures (UMA)** and Linux x64, v3.0.0 introduces **Smart Adaptive Offloading & OOM Watchdog Guards** (guaranteeing freeze-free memory safety), **Hierarchical Context Compaction** powered by `hcs-subagent` (Bonsai 1.7B), **Native HCS Aider Coding Agent** with Tree-sitter repo maps and atomic SEARCH/REPLACE diffing, a dedicated **Web Dashboard Coding Studio**, **Adaptive Thinking Budgets**, **J-Space** multi-model shared state handover, **Persistent Brain** auto-learning loops, and a **1-Click Windows Installer (`.exe`)**.
 
 ---
 

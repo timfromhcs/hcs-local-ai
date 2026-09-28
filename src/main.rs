@@ -3,6 +3,7 @@ mod api;
 mod backend;
 pub mod brain;
 mod config;
+pub mod context_compactor;
 mod db;
 mod doctor;
 pub mod j_space;
@@ -181,6 +182,13 @@ async fn main() -> anyhow::Result<()> {
                 sd_worker,
                 event_tx,
             };
+
+            // Start proactive OOM watchdog memory guard
+            Watchdog::start_memory_guard(
+                state.resource.clone(),
+                state.active_workers.clone(),
+                state.registry.clone(),
+            );
 
             let app = api::create_router(state);
             let addr = format!("{}:{}", config.server.host, listen_port);

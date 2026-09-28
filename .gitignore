@@ -2,6 +2,8 @@
 /target/
 **/*.rs.bk
 Cargo.lock
+hcs-daemon.exe
+*.exe
 
 # Model weights and binaries (too large for git, durable on disk)
 models/**/*.gguf
@@ -56,5 +58,6 @@ __pycache__/
 *.pyc
 benchmarks/cli_coding_sandbox/
 benchmarks/swe_workload_sandbox/
+benchmarks/aider_sandbox/
 
 

@@ -2,7 +2,7 @@
 setlocal
 
 echo ======================================================================
-echo           HCS Local AI v2.5.0 Stable - Stopping Server
+echo           HCS Local AI v3.0.0 Stable - Stopping Server
 echo ======================================================================
 echo.
 

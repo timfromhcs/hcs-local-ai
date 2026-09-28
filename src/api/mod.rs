@@ -72,23 +72,44 @@ impl AppState {
             anyhow::bail!("Model {} is QUARANTINED due to consecutive crashes", model_id);
         }
 
-        // Heavy model policy: max_heavy_active = 1
         let is_heavy = ResourceManager::is_heavy_model(model_id);
-        if is_heavy {
-            // Evict any existing running heavy model
-            let mut to_evict = Vec::new();
-            for (id, _) in workers.iter() {
-                if ResourceManager::is_heavy_model(id) && id != model_id {
-                    to_evict.push(id.clone());
+
+        // Smart Offloading Policy: Determine which active models must be evicted
+        let active_ids: Vec<String> = workers.keys().cloned().collect();
+        let to_evict = self.resource.determine_evictions_for_load(model_id, &active_ids);
+        for id in to_evict {
+            info!("Smart Offload: Evicting model '{}' to free memory before loading '{}'...", id, model_id);
+            if let Some(mut old_worker) = workers.remove(&id) {
+                old_worker.stop().await;
+                if ResourceManager::is_heavy_model(&id) {
+                    self.resource.release_heavy_permit();
                 }
+                self.registry.update_state(&id, ModelLifecycleState::Cold);
             }
-            for id in to_evict {
-                info!("Evicting heavy model '{}' to satisfy max_heavy_active=1 policy", id);
+        }
+
+        // Memory Safety Gate: Ensure sufficient RAM/VRAM is available to prevent system lockup
+        let needed_mb = ResourceManager::estimate_model_memory_mb(model_id);
+        if !self.resource.check_memory_available(needed_mb) {
+            let avail_mb = self.resource.get_available_memory_mb();
+            warn!("Memory safety threshold check warning for {}: Available {} MB, Need {} MB", model_id, avail_mb, needed_mb);
+            let remaining: Vec<String> = workers.keys().filter(|&k| k != model_id).cloned().collect();
+            for id in remaining {
+                info!("Emergency Offload: Evicting '{}'...", id);
                 if let Some(mut old_worker) = workers.remove(&id) {
                     old_worker.stop().await;
-                    self.resource.release_heavy_permit();
+                    if ResourceManager::is_heavy_model(&id) {
+                        self.resource.release_heavy_permit();
+                    }
                     self.registry.update_state(&id, ModelLifecycleState::Cold);
                 }
+            }
+            if !self.resource.check_memory_available(needed_mb) {
+                let avail_mb = self.resource.get_available_memory_mb();
+                anyhow::bail!(
+                    "Cannot safely load {}: Insufficient memory ({:.1} GB available, need {:.1} GB). Refusing load to protect system stability.",
+                    model_id, (avail_mb as f64) / 1024.0, (needed_mb as f64) / 1024.0
+                );
             }
         }
 
@@ -105,10 +126,10 @@ impl AppState {
         let mmproj_path = model_info.manifest.mmproj.as_ref().map(|f| model_info.directory.join(f));
         let ctx_len = std::cmp::min(model_info.manifest.context.unwrap_or(4096), if is_heavy { 4096 } else { 8192 });
         let flash_attn = &self.config.resources.flash_attention;
-        let gpu_layers = if model_id == "hcs-vlm" { 32 } else { 99 };
+        let gpu_layers = ResourceManager::get_safe_gpu_layers(model_id);
         let threads = self.config.resources.threads;
-        let batch_size = self.config.resources.batch_size;
-        let ubatch_size = self.config.resources.ubatch_size;
+        let batch_size = std::cmp::min(self.config.resources.batch_size, 512);
+        let ubatch_size = std::cmp::min(self.config.resources.ubatch_size, 128);
         let cache_type_k = &self.config.resources.cache_type_k;
         let cache_type_v = &self.config.resources.cache_type_v;
 
@@ -201,6 +222,10 @@ pub fn create_router(state: AppState) -> Router {
         .route("/hcs/v2/brain/recall", get(hcs::brain_recall))
         .route("/hcs/v2/brain/insights", get(hcs::brain_insights))
         .route("/hcs/v2/hardware/profile", get(hcs::hardware_profile))
+        .route("/hcs/v2/compact", post(hcs::compact_context))
+        .route("/hcs/v2/jspace/sessions/{id}/handover", post(hcs::jspace_handover))
+        .route("/hcs/v2/jspace/sessions/{id}/variables", get(hcs::get_jspace_variables).post(hcs::set_jspace_variable))
+
 
         // Static routes for artifacts and dashboard UI
         .nest_service("/artifacts", ServeDir::new(artifacts_dir))

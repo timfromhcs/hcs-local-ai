@@ -6,15 +6,15 @@ server:
 
 resources:
   max_heavy_active: 1
-  system_reserve_mb: 2048
-  emergency_reserve_mb: 1024
+  system_reserve_mb: 3072
+  emergency_reserve_mb: 1536
   flash_attention: "on"
   kv_cache_type: "q8_0"
   cache_type_k: "q8_0"
   cache_type_v: "q8_0"
-  threads: 8
-  batch_size: 1024
-  ubatch_size: 256
+  threads: 6
+  batch_size: 512
+  ubatch_size: 128
 
 jspace:
   max_active_sessions: 64
@@ -33,18 +33,18 @@ models:
     flash_attn: "auto"
   coder:
     id: "hcs-coder"
-    context: 8192
-    gpu_layers: 99
+    context: 4096
+    gpu_layers: 32
     flash_attn: "auto"
   judge:
     id: "hcs-judge"
     context: 4096
-    gpu_layers: 99
+    gpu_layers: 32
     flash_attn: "auto"
   vlm:
     id: "hcs-vlm"
     context: 4096
-    gpu_layers: 32
+    gpu_layers: 28
     flash_attn: "auto"
   image:
     id: "hcs-image"

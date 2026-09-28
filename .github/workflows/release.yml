@@ -37,35 +37,57 @@ jobs:
       - name: Build Release Binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package Artifacts (Windows)
+      - name: Package Artifacts & Build 1-Click Windows Setup (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           $ver = "${{ github.ref_name }}"
-          if (-not $ver) { $ver = "v1.0.1" }
+          if (-not $ver) { $ver = "v3.0.0" }
           $pkgName = "hcs-local-ai-$ver-windows-x64"
           New-Item -ItemType Directory -Path "pkg/$pkgName" -Force
           Copy-Item "target/${{ matrix.target }}/release/hcs-daemon.exe" "pkg/$pkgName/"
+          Copy-Item "target/${{ matrix.target }}/release/hcs-daemon.exe" "./hcs-daemon.exe" -Force
           Copy-Item "README.md" "pkg/$pkgName/"
           Copy-Item "LICENSE-MIT" "pkg/$pkgName/" -ErrorAction SilentlyContinue
           Copy-Item "LICENSE-APACHE" "pkg/$pkgName/" -ErrorAction SilentlyContinue
           Copy-Item "config.yaml" "pkg/$pkgName/" -ErrorAction SilentlyContinue
+          Copy-Item "start.bat" "pkg/$pkgName/" -ErrorAction SilentlyContinue
+          Copy-Item "stop.bat" "pkg/$pkgName/" -ErrorAction SilentlyContinue
+          Copy-Item "hcs-aider.bat" "pkg/$pkgName/" -ErrorAction SilentlyContinue
+          Copy-Item -Recurse "dashboard" "pkg/$pkgName/dashboard" -ErrorAction SilentlyContinue
+          Copy-Item -Recurse "harnesses" "pkg/$pkgName/harnesses" -ErrorAction SilentlyContinue
           Copy-Item -Recurse "models" "pkg/$pkgName/models" -ErrorAction SilentlyContinue
+
+          # Compress portable zip
           Compress-Archive -Path "pkg/$pkgName/*" -DestinationPath "$pkgName.zip" -Force
           $hash = (Get-FileHash -Algorithm SHA256 "$pkgName.zip").Hash
           "$hash  $pkgName.zip" | Out-File -FilePath "$pkgName.zip.sha256" -Encoding ascii
+
+          # Install Inno Setup and compile 1-click Windows Installer .exe
+          choco install innosetup -y
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (Test-Path $iscc) {
+              New-Item -ItemType Directory -Path "dist" -Force
+              & $iscc installer/hcs_setup.iss
+              if (Test-Path "dist/HCS-Local-AI-v3.0.0-Setup.exe") {
+                  $setupHash = (Get-FileHash -Algorithm SHA256 "dist/HCS-Local-AI-v3.0.0-Setup.exe").Hash
+                  "$setupHash  HCS-Local-AI-v3.0.0-Setup.exe" | Out-File -FilePath "dist/HCS-Local-AI-v3.0.0-Setup.exe.sha256" -Encoding ascii
+              }
+          }
 
       - name: Package Artifacts (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           VER="${{ github.ref_name }}"
-          [ -z "$VER" ] && VER="v1.0.1"
+          [ -z "$VER" ] && VER="v3.0.0"
           PKG_NAME="hcs-local-ai-$VER-linux-x64"
           mkdir -p "pkg/$PKG_NAME"
           cp "target/${{ matrix.target }}/release/hcs-daemon" "pkg/$PKG_NAME/"
           cp README.md "pkg/$PKG_NAME/"
           cp LICENSE-* "pkg/$PKG_NAME/" 2>/dev/null || true
           cp config.yaml "pkg/$PKG_NAME/" 2>/dev/null || true
+          cp -r dashboard "pkg/$PKG_NAME/" 2>/dev/null || true
+          cp -r harnesses "pkg/$PKG_NAME/" 2>/dev/null || true
           cp -r models "pkg/$PKG_NAME/" 2>/dev/null || true
           tar -czf "$PKG_NAME.tar.gz" -C pkg "$PKG_NAME"
           sha256sum "$PKG_NAME.tar.gz" > "$PKG_NAME.tar.gz.sha256"
@@ -77,5 +99,7 @@ jobs:
           files: |
             *.zip
             *.zip.sha256
+            dist/*.exe
+            dist/*.exe.sha256
             *.tar.gz
             *.tar.gz.sha256

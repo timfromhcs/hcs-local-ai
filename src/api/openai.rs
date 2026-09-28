@@ -95,6 +95,36 @@ pub async fn chat_completions(
     };
     let is_streaming = payload.stream;
 
+    // 1. Automatic Context Compaction if token estimate is high (> 4500) or explicit header
+    let force_compact = headers.get("x-hcs-compact")
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v == "true" || v == "auto")
+        .unwrap_or(false);
+    let est_tokens = crate::context_compactor::ContextCompactor::estimate_tokens(&payload.messages);
+    if (est_tokens > 4500 || force_compact) && target_model_id != "hcs-subagent" {
+        let compactor = crate::context_compactor::ContextCompactor::new(std::sync::Arc::new(state.clone()));
+        if let Ok(compacted) = compactor.compact(&payload.messages, 3).await {
+            payload.messages = compacted.compacted_messages;
+        }
+    }
+
+    // 2. Adaptive Thinking & Working Tokens for hcs-coder
+    if target_model_id == "hcs-coder" {
+        if payload.max_tokens.is_none() {
+            payload.max_tokens = Some(2048);
+        }
+        if !payload.extra.contains_key("chat_template_kwargs") {
+            let user_wants_thinking = payload.extra.get("enable_thinking")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if user_wants_thinking {
+                payload.extra.insert("chat_template_kwargs".to_string(), serde_json::json!({ "enable_thinking": true }));
+            } else {
+                payload.extra.insert("chat_template_kwargs".to_string(), serde_json::json!({ "enable_thinking": false }));
+            }
+        }
+    }
+
     // Check if worker is ready, or start it
     let port = state.ensure_worker(&target_model_id).await.map_err(|e| {
         (
@@ -113,10 +143,11 @@ pub async fn chat_completions(
     let forward_val = serde_json::to_value(&payload).unwrap();
 
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(300))
+        .timeout(std::time::Duration::from_secs(600))
         .build()
         .unwrap_or_default();
     let worker_url = format!("http://127.0.0.1:{}/v1/chat/completions", port);
+
 
     let resp = client.post(&worker_url)
         .json(&forward_val)

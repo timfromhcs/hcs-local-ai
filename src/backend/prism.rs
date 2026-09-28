@@ -122,6 +122,8 @@ impl PrismWorker {
             info!("Stopping Prism worker on port {}...", self.port);
             let _ = child.kill().await;
             let _ = child.wait().await;
+            // Grace period to allow Windows kernel to reclaim committed virtual memory pages
+            tokio::time::sleep(Duration::from_millis(300)).await;
         }
     }
 }
