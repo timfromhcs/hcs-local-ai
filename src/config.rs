@@ -28,6 +28,7 @@ pub struct StorageConfig {
 }
 
 fn default_q8() -> String { "q8_0".to_string() }
+fn default_true() -> bool { true }
 fn default_threads() -> usize { 8 }
 fn default_batch_size() -> usize { 1024 }
 fn default_ubatch_size() -> usize { 256 }
@@ -44,6 +45,20 @@ pub struct ResourceConfig {
     pub cache_type_k: String,
     #[serde(default = "default_q8")]
     pub cache_type_v: String,
+    #[serde(default = "default_true")]
+    pub kv_unified: bool,
+    #[serde(default = "default_true")]
+    pub context_shift: bool,
+    #[serde(default)]
+    pub kv_cache_type: Option<String>,
+    #[serde(default)]
+    pub rope_scaling: Option<String>,
+    #[serde(default)]
+    pub rope_scale: Option<f64>,
+    #[serde(default)]
+    pub rope_freq_base: Option<u64>,
+    #[serde(default)]
+    pub yarn_orig_ctx: Option<usize>,
     #[serde(default = "default_threads")]
     pub threads: usize,
     #[serde(default = "default_batch_size")]
@@ -100,12 +115,19 @@ impl Default for Config {
                 max_heavy_active: 1,
                 system_reserve_mb: 3072,
                 emergency_reserve_mb: 1024,
-                flash_attention: "auto".to_string(),
-                cache_type_k: "q8_0".to_string(),
-                cache_type_v: "q8_0".to_string(),
+                flash_attention: "on".to_string(),
+                cache_type_k: "q4_0".to_string(),
+                cache_type_v: "q4_0".to_string(),
+                kv_unified: true,
+                context_shift: true,
+                kv_cache_type: Some("q4_0".to_string()),
+                rope_scaling: Some("yarn".to_string()),
+                rope_scale: Some(8.0),
+                rope_freq_base: Some(1000000),
+                yarn_orig_ctx: Some(8192),
                 threads: 8,
-                batch_size: 1024,
-                ubatch_size: 256,
+                batch_size: 512,
+                ubatch_size: 128,
             },
             jspace: JSpaceConfig::default(),
             watchdog: WatchdogConfig {

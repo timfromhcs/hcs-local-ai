@@ -107,6 +107,11 @@ function appendLiveLog(evt) {
   div.className = "log-entry";
   div.innerHTML = `<span style="color:#8b949e">[${new Date(evt.timestamp).toLocaleTimeString()}]</span> <span style="color:#388bfd;font-weight:600">${evt.event.toUpperCase()}</span>: <span>${JSON.stringify(evt.data)}</span>`;
   container.prepend(div);
+
+  // Virtualized Windowing: prevent memory leak during massive 64k generations
+  while (container.children.length > 150) {
+    container.removeChild(container.lastChild);
+  }
 }
 
 function clearLiveLogs() {

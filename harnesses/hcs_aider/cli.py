@@ -123,7 +123,7 @@ class InteractiveHCSAider:
         self.agent = HCSAiderAgent(
             repo_dir=self.repo_dir,
             enable_thinking=self.enable_thinking,
-            max_tokens=2048,
+            max_tokens=4096,
         )
         self.session = PromptSession(
             completer=RepoFileCompleter(self.repo_dir),
@@ -136,10 +136,11 @@ class InteractiveHCSAider:
     def print_banner(self):
         banner_text = f"""[bold cyan]HCS AIDER — Autonomous Software Engineering Agent[/bold cyan]
 [dim]Repository:[/dim] [yellow]{self.repo_dir}[/yellow]
-[dim]Model:[/dim] [green]hcs-coder (Bonsai 2-27B on AMD iGPU Vulkan)[/green]
+[dim]Model:[/dim] [green]hcs-coder (Bonsai 2-27B on AMD iGPU Vulkan, 64k Context)[/green]
+[dim]KV Cache:[/dim] [cyan]Unified Q4_0 with Flash-Attention (FP32 Accumulator)[/cyan]
 [dim]Decider Gate:[/dim] [blue]hcs-judge (OpenJev 4B in J-Space)[/blue] | [dim]Compactor:[/dim] [magenta]hcs-subagent (1.7B)[/magenta]
 [dim]Commands:[/dim] [bold]/add, /drop, /ls, /map, /diff, /undo, /test, /think, /help, /exit[/bold]"""
-        console.print(Panel(banner_text, border_style="cyan", title="⚡ HCS Local AI v4.0.0"))
+        console.print(Panel(banner_text, border_style="cyan", title="⚡ HCS Local AI v5.0.0 Stable"))
 
     def cmd_add(self, files: list[str]):
         added = []

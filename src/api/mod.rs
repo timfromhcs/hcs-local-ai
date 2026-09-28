@@ -132,17 +132,10 @@ impl AppState {
         let prism_bin = self.config.storage.runtime_dir.join("windows-x64/prism/llama-server.exe");
         let mmproj_path = model_info.manifest.mmproj.as_ref().map(|f| model_info.directory.join(f));
 
-        // Expanded Context Budget with KV Cache Compression (Q8_0 / Q4_0)
-        let ctx_len = match model_id {
-            "hcs-coder" => 8192,
-            "hcs-general" => 8192,
-            _ => 4096,
-        };
-        let (cache_type_k, cache_type_v) = if ctx_len > 8192 {
-            ("q4_0", "q4_0")
-        } else {
-            ("q8_0", "q8_0")
-        };
+        // 64k (65,536 tokens) Extended Context Window for all models with Q4_0 Unified KV Cache
+        let ctx_len = 65536;
+        let cache_type_k = &self.config.resources.cache_type_k;
+        let cache_type_v = &self.config.resources.cache_type_v;
 
         let flash_attn = &self.config.resources.flash_attention;
         let gpu_layers = ResourceManager::get_safe_gpu_layers(model_id);

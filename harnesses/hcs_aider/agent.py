@@ -98,11 +98,11 @@ path/to/file.ext
 
         # Trigger automatic context compaction if token estimate exceeds 4,500 tokens
         char_count = sum(len(str(m.get("content", ""))) for m in self.messages)
-        if char_count > 16000:
+        if char_count > 120000:  # ~30k tokens with 64k context headroom
             try:
                 comp_resp = requests.post(
                     f"{self.hcs_api_url}/compact",
-                    json={"messages": self.messages, "preserve_recent": 2},
+                    json={"messages": self.messages, "preserve_recent": 4},
                     timeout=30,
                 )
                 if comp_resp.status_code == 200:

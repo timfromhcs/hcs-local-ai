@@ -9,10 +9,16 @@ resources:
   system_reserve_mb: 3072
   emergency_reserve_mb: 1536
   flash_attention: "on"
-  kv_cache_type: "q8_0"
-  cache_type_k: "q8_0"
-  cache_type_v: "q8_0"
-  threads: 6
+  kv_cache_type: "q4_0"
+  cache_type_k: "q4_0"
+  cache_type_v: "q4_0"
+  kv_unified: true
+  context_shift: true
+  rope_scaling: "yarn"
+  rope_scale: 8.0
+  rope_freq_base: 1000000
+  yarn_orig_ctx: 8192
+  threads: 8
   batch_size: 512
   ubatch_size: 128
 
@@ -23,29 +29,29 @@ jspace:
 models:
   subagent:
     id: "hcs-subagent"
-    context: 4096
+    context: 65536
     gpu_layers: 99
-    flash_attn: "auto"
+    flash_attn: "on"
   general:
     id: "hcs-general"
-    context: 8192
+    context: 65536
     gpu_layers: 99
-    flash_attn: "auto"
+    flash_attn: "on"
   coder:
     id: "hcs-coder"
-    context: 4096
+    context: 65536
     gpu_layers: 32
-    flash_attn: "auto"
+    flash_attn: "on"
   judge:
     id: "hcs-judge"
-    context: 4096
+    context: 65536
     gpu_layers: 32
-    flash_attn: "auto"
+    flash_attn: "on"
   vlm:
     id: "hcs-vlm"
-    context: 4096
+    context: 65536
     gpu_layers: 28
-    flash_attn: "auto"
+    flash_attn: "on"
   image:
     id: "hcs-image"
     width: 512

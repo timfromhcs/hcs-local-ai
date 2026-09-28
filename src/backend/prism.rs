@@ -53,6 +53,16 @@ impl PrismWorker {
         cmd.arg("--cache-type-k").arg(cache_type_k);
         cmd.arg("--cache-type-v").arg(cache_type_v);
         cmd.arg("--cont-batching");
+        cmd.arg("--kv-unified");
+        cmd.arg("--context-shift");
+
+        if context_size > 8192 {
+            cmd.arg("--rope-scaling").arg("yarn");
+            cmd.arg("--yarn-orig-ctx").arg("8192");
+            let scale = ((context_size as f64) / 8192.0).ceil() as u32;
+            cmd.arg("--rope-scale").arg(scale.to_string());
+            cmd.arg("--rope-freq-base").arg("1000000");
+        }
 
         if let Some(mmproj) = mmproj_path {
             if mmproj.exists() {
