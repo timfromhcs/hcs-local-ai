@@ -1,0 +1,30 @@
+{
+  "timestamp": 1790583473.204201,
+  "model": "hcs-coder",
+  "harness": "mini-swe-agent (v2.4.6)",
+  "pass_rate_percent": 100.0,
+  "tasks_passed": 4,
+  "tasks_total": 4,
+  "results": [
+    {
+      "task": "SWE-bench/marshmallow-1359 (Nested DateTime Schema Opts)",
+      "passed": true,
+      "latency": 50.91855764389038
+    },
+    {
+      "task": "SWE-bench/marshmallow-1343 (NoneType Guard in Unmarshaller)",
+      "passed": true,
+      "latency": 39.42164349555969
+    },
+    {
+      "task": "Workload Bench/Async Job Pool (Priority Queue & Graceful Retries)",
+      "passed": true,
+      "latency": 81.0399580001831
+    },
+    {
+      "task": "Workload Bench/Data Validator (Type Coercion & Schema Constraints)",
+      "passed": true,
+      "latency": 72.85550618171692
+    }
+  ]
+}

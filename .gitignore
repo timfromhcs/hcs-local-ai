@@ -54,4 +54,7 @@ test_vlm.py
 test_agent.py
 __pycache__/
 *.pyc
+benchmarks/cli_coding_sandbox/
+benchmarks/swe_workload_sandbox/
+
 
