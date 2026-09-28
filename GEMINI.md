@@ -1,7 +1,7 @@
 # HCS Local AI — GEMINI.md
 
 > **Project:** HCS Local AI
-> **Release target:** `v1.0.0`
+> **Release target:** `v3.0.0 Stable`
 > **Primary platform:** Windows x64, native Vulkan
 > **Secondary platform:** Linux x64, native Vulkan
 > **Architecture:** local-first, single-node, native daemon, OpenAI-compatible + Anthropic-compatible API, browser dashboard, agentic orchestration, persistent memory, real observability, model lifecycle management, self-healing, reproducible builds and verified releases.
@@ -6125,3 +6125,49 @@ HCS Local AI v1.0.0 — VERIFIED RELEASE
 ```
 
 and publish the stable GitHub release.
+
+---
+
+# 276. HCS LOCAL AI v3.0.0 SPECIFICATION & MASTER PLAN INTEGRATION
+
+The project lifecycle advances from v2.5.0 to **`HCS Local AI v3.0.0 Stable`**, incorporating the complete technical specifications detailed in `HCS_V3_MASTER_PLAN.md`:
+
+## 276.1 CONTEXT COMPACTION & SUBAGENT ROLE
+- Designate `hcs-subagent` (Bonsai 1.7B Q1_0) as the dedicated Platform Context Compactor.
+- When context reaches $\ge 70\%$ of model window or exceeds 5,000 tokens, trigger automated 3-stage compaction:
+  1. Extractive Pruning (strip verbose tool/shell outputs into hash anchors).
+  2. Semantic State Synthesis (generate structured Context Delta: active goal, system state, recent discoveries, preserved code).
+  3. Memory Graph Anchoring (deposit historical facts to SQLite WAL Brain).
+- Guarantees $60-80\%$ context reduction with zero loss of active code context.
+
+## 276.2 HARDWARE ACCELERATION & UMA SAFEGUARDS (AMD iGPU / VULKAN)
+- Hardware Target: Windows 11 x64, AMD Radeon Graphics (UMA), 20–24 GB shared RAM.
+- Strict single-heavy model concurrency: `max_heavy_active = 1` (`hcs-coder`, `hcs-vlm`, `hcs-image`).
+- Vulkan worker tuning: Q8_0 KV Cache compression (`--cache-type-k q8_0 --cache-type-v q8_0`), Flash Attention on Vulkan (`-fa 1`), continuous batching (`--cont-batching`), thread pinning (8 compute threads, 8 OS reserved threads).
+- Asynchronous worker eviction: Instant termination and virtual memory page de-commit ($< 400\text{ ms}$).
+- Predictive Pre-warming: Concurrently initialize `hcs-coder` during Stage 1 intent extraction.
+
+## 276.3 ADAPTIVE THINKING & WORKING TOKEN BUDGETS
+- Dual-mode reasoning control:
+  - Fast Mode: `enable_thinking = false`, direct token emission within 3–5 seconds for quick edits.
+  - Deep Reasoning Mode: `enable_thinking = true`, thinking budget 512–1,536 tokens, working limit up to 4,096 tokens for architectural and SWE-bench tasks.
+- Jev Decision Pipeline automatically switches modes based on complexity score ($\ge 4$ activates Deep Reasoning).
+
+## 276.4 ADVANCED J-SPACE MULTI-MODEL WORKSPACE
+- Persistent shared state container (`storage/jspace/<session_id>.json`) holding active repository path, git branches, linter diagnostics, and test traces.
+- Seamless inter-model delegation: `subagent` (compaction/parsing) ➔ `judge` (OpenJev gate) ➔ `coder` (Bonsai 2-27B code patch) ➔ `judge`/`subagent` (verification) ➔ `brain` (learning).
+
+## 276.5 NATIVE HCS AIDER AGENT & DASHBOARD STUDIO
+- Dedicated repository-scale coding agent directly interfacing with `http://127.0.0.1:8787/v1`.
+- Features: Tree-sitter repository tag map, atomic unified diff application (`SEARCH/REPLACE`), auto-rollback on test regression, git-backed checkpoints.
+- Dashboard Studio: Modern SPA UI featuring interactive file tree, side-by-side diff review, live token monitor, and embedded terminal output.
+
+## 276.6 CONTINUOUS BENCHMARK & PERSISTENT BRAIN LEARNING LOOP
+- Expansion to 20-task benchmark pool (SWE-bench Lite, HumanEval+, Multi-File workloads).
+- Autonomous self-healing feedback: failed compilation/test traces trigger patch generation and deposit `(failure_signature, corrective_diff)` into SQLite WAL store for future recall.
+
+## 276.7 PACKAGING & WINDOWS INSTALLER (.exe)
+- Creation of `HCS-Local-AI-v3.0.0-Setup.exe` (Inno Setup / NSIS).
+- Bundles daemon binary, Web Dashboard SPA, Vulkan runtimes, HCS Aider Agent, 1-click `start.bat` / `stop.bat`, and Start Menu shortcuts.
+- Fully verified without mock data before tag, release, and GitHub push.
+
