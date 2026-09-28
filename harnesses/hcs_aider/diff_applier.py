@@ -114,4 +114,4 @@ class DiffApplier:
                     file_chunks.setdefault(current_file, []).append((search_block, replace_block))
             i += 1
 
-        return file_chunks
+        return {k: v for k, v in file_chunks.items() if len(v) > 0}

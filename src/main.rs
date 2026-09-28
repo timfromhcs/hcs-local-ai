@@ -145,6 +145,20 @@ async fn main() -> anyhow::Result<()> {
             }
         },
         Commands::Run { port } => {
+            #[cfg(target_os = "windows")]
+            {
+                let _ = std::process::Command::new("taskkill")
+                    .args(["/F", "/IM", "llama-server.exe"])
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .status();
+                let _ = std::process::Command::new("taskkill")
+                    .args(["/F", "/IM", "sd-cli.exe"])
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .status();
+            }
+
             let listen_port = port.unwrap_or(config.server.port);
 
             let resource = Arc::new(ResourceManager::new(

@@ -1,6 +1,6 @@
 [package]
 name = "hcs-daemon"
-version = "5.0.2"
+version = "5.0.3"
 edition = "2021"
 authors = ["timfromhcs <timfromhcs@gmail.com>"]
 description = "HCS Local AI unified daemon - OpenAI & Anthropic compatible API, Prism & SD.cpp Vulkan orchestration, agent runtime, persistent memory, and browser dashboard"

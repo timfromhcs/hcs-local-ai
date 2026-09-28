@@ -95,13 +95,13 @@ pub async fn chat_completions(
     };
     let is_streaming = payload.stream;
 
-    // 1. Automatic Context Compaction if token estimate is high (> 4500) or explicit header
+    // 1. Automatic Context Compaction if token estimate is high (> 24000) or explicit header
     let force_compact = headers.get("x-hcs-compact")
         .and_then(|v| v.to_str().ok())
-        .map(|v| v == "true" || v == "auto")
+        .map(|v| v == "true")
         .unwrap_or(false);
     let est_tokens = crate::context_compactor::ContextCompactor::estimate_tokens(&payload.messages);
-    if (est_tokens > 4500 || force_compact) && target_model_id != "hcs-subagent" {
+    if (est_tokens > 24000 || force_compact) && target_model_id != "hcs-subagent" {
         let compactor = crate::context_compactor::ContextCompactor::new(std::sync::Arc::new(state.clone()));
         if let Ok(compacted) = compactor.compact(&payload.messages, 3).await {
             payload.messages = compacted.compacted_messages;

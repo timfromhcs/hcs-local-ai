@@ -1,6 +1,6 @@
-; HCS Local AI v5.0.2 Windows Installer Script (Inno Setup)
+; HCS Local AI v5.0.3 Windows Installer Script (Inno Setup)
 #define MyAppName "HCS Local AI"
-#define MyAppVersion "5.0.2"
+#define MyAppVersion "5.0.3"
 #define MyAppPublisher "HCS"
 #define MyAppURL "https://github.com/timfromhcs/hcs-local-ai"
 #define MyAppExeName "hcs-daemon.exe"
@@ -17,7 +17,7 @@ DefaultDirName={autopf}\HCS-Local-AI
 DisableProgramGroupPage=yes
 LicenseFile=..\LICENSE-MIT
 OutputDir=..\dist
-OutputBaseFilename=HCS-Local-AI-v5.0.2-Setup
+OutputBaseFilename=HCS-Local-AI-v5.0.3-Setup
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern

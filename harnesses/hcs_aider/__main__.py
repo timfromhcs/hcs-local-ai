@@ -11,7 +11,9 @@ from .cli import InteractiveHCSAider, ensure_daemon_online
 
 def main():
     parser = argparse.ArgumentParser(description="HCS Aider - Native Autonomous Coding Agent")
+    parser.add_argument("files", nargs="*", default=[], help="Files to focus on immediately")
     parser.add_argument("--dir", default=".", help="Target repository directory (default: current directory)")
+    parser.add_argument("--model", default="auto", help="Inference model: auto, hcs-coder, hcs-general, hcs-judge, hcs-vlm (default: auto)")
     parser.add_argument("--task", default=None, help="Coding task or bugfix instruction (if omitted, launches interactive UI)")
     parser.add_argument("--test-cmd", default=None, help="Custom test command (e.g. 'pytest tests/test_core.py')")
     parser.add_argument("--thinking", action="store_true", help="Enable deep reasoning thinking mode")
@@ -28,18 +30,20 @@ def main():
         agent = HCSAiderAgent(
             repo_dir=repo_path,
             enable_thinking=args.thinking,
+            model=args.model,
             max_tokens=args.max_tokens,
         )
-        result = agent.execute_task_with_self_healing(args.task, test_cmd=args.test_cmd)
-        if result["success"]:
-            print(f"\n[OK] Task completed successfully in {result['elapsed_seconds']:.2f}s ({result['turns']} turn(s))")
-            sys.exit(0)
-        else:
-            print(f"\n[ERROR] Task failed after {result['turns']} turn(s)")
-            sys.exit(1)
+        res = agent.query_model_stream(
+            user_prompt=args.task,
+            target_files=args.files,
+            on_token=lambda tok: (sys.stdout.write(tok), sys.stdout.flush()),
+        )
+        sys.exit(0)
     else:
         # Interactive Terminal UI Mode
-        ui = InteractiveHCSAider(repo_dir=repo_path, enable_thinking=args.thinking)
+        ui = InteractiveHCSAider(repo_dir=repo_path, enable_thinking=args.thinking, model=args.model)
+        if args.files:
+            ui.cmd_add(args.files)
         ui.run_interactive()
 
 
