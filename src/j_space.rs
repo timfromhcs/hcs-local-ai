@@ -167,6 +167,34 @@ impl JSpaceManager {
         }
     }
 
+    pub fn record_decision(&self, session_id: &str, candidates: &[String], chosen: &str, reason: Option<&str>) -> bool {
+        let mut map = self.sessions.write().unwrap();
+        if let Some(session) = map.get_mut(session_id) {
+            let candidate_list = candidates.join(" | ");
+            let content = format!(
+                "[J-SPACE OPENJEV DECISION GATE]\nCandidates: {}\nSelected Candidate: {}\nReasoning: {}",
+                candidate_list,
+                chosen,
+                reason.unwrap_or("Optimal score per OpenJev decision contract")
+            );
+            let turn = JSpaceTurn {
+                role: "system".to_string(),
+                model: "hcs-judge".to_string(),
+                content,
+                tool_calls: None,
+                tool_results: None,
+                timestamp: Utc::now(),
+            };
+            session.turns.push(turn);
+            session.shared_state.insert("last_decision".to_string(), chosen.to_string());
+            session.shared_state.insert("last_decision_timestamp".to_string(), Utc::now().to_rfc3339());
+            session.last_accessed_at = Utc::now();
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn delete_session(&self, session_id: &str) -> bool {
         let mut map = self.sessions.write().unwrap();
         map.remove(session_id).is_some()
@@ -240,6 +268,20 @@ pub mod tests {
         assert_eq!(s_after.turns.len(), 1);
         assert!(s_after.turns[0].content.contains("J-SPACE HANDOVER"));
         assert_eq!(s_after.shared_state.get("active_model").unwrap(), "hcs-coder");
+
+        // Record OpenJev Decision Gate
+        let candidates = vec![
+            "A: Add guard clause".to_string(),
+            "B: Refactor schema options".to_string(),
+        ];
+        let dec_ok = mgr.record_decision(&s.id, &candidates, &candidates[1], Some("Minimal risk"));
+        assert!(dec_ok);
+
+        let s_dec = mgr.get_session(&s.id).unwrap();
+        assert_eq!(s_dec.turns.len(), 2);
+        assert!(s_dec.turns[1].content.contains("OPENJEV DECISION GATE"));
+        assert_eq!(s_dec.shared_state.get("last_decision").unwrap(), "B: Refactor schema options");
     }
 }
+
 

@@ -104,10 +104,17 @@ impl AppState {
                     self.registry.update_state(&id, ModelLifecycleState::Cold);
                 }
             }
+            // Zero-Abort Asynchronous Queue: Wait up to 30s for memory to settle before giving up
+            let mut wait_attempts = 0;
+            while !self.resource.check_memory_available(needed_mb) && wait_attempts < 60 {
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                wait_attempts += 1;
+            }
+
             if !self.resource.check_memory_available(needed_mb) {
                 let avail_mb = self.resource.get_available_memory_mb();
                 anyhow::bail!(
-                    "Cannot safely load {}: Insufficient memory ({:.1} GB available, need {:.1} GB). Refusing load to protect system stability.",
+                    "Cannot safely load {}: Insufficient memory after queue wait ({:.1} GB available, need {:.1} GB). Refusing load to protect system stability.",
                     model_id, (avail_mb as f64) / 1024.0, (needed_mb as f64) / 1024.0
                 );
             }
@@ -124,14 +131,24 @@ impl AppState {
 
         let prism_bin = self.config.storage.runtime_dir.join("windows-x64/prism/llama-server.exe");
         let mmproj_path = model_info.manifest.mmproj.as_ref().map(|f| model_info.directory.join(f));
-        let ctx_len = std::cmp::min(model_info.manifest.context.unwrap_or(4096), if is_heavy { 4096 } else { 8192 });
+
+        // Expanded Context Budget with KV Cache Compression (Q8_0 / Q4_0)
+        let ctx_len = match model_id {
+            "hcs-coder" => 8192,
+            "hcs-general" => 8192,
+            _ => 4096,
+        };
+        let (cache_type_k, cache_type_v) = if ctx_len > 8192 {
+            ("q4_0", "q4_0")
+        } else {
+            ("q8_0", "q8_0")
+        };
+
         let flash_attn = &self.config.resources.flash_attention;
         let gpu_layers = ResourceManager::get_safe_gpu_layers(model_id);
         let threads = self.config.resources.threads;
         let batch_size = std::cmp::min(self.config.resources.batch_size, 512);
         let ubatch_size = std::cmp::min(self.config.resources.ubatch_size, 128);
-        let cache_type_k = &self.config.resources.cache_type_k;
-        let cache_type_v = &self.config.resources.cache_type_v;
 
         let worker = PrismWorker::start(
             model_id,
@@ -225,6 +242,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/hcs/v2/compact", post(hcs::compact_context))
         .route("/hcs/v2/jspace/sessions/{id}/handover", post(hcs::jspace_handover))
         .route("/hcs/v2/jspace/sessions/{id}/variables", get(hcs::get_jspace_variables).post(hcs::set_jspace_variable))
+        .route("/hcs/v2/jspace/sessions/{id}/decide", post(hcs::jspace_decide))
 
 
         // Static routes for artifacts and dashboard UI

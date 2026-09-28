@@ -715,4 +715,86 @@ pub async fn set_jspace_variable(
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub struct JSpaceDecideRequest {
+    pub state_description: String,
+    pub instructions: String,
+    pub candidates: Vec<String>,
+}
+
+// POST /hcs/v2/jspace/sessions/:id/decide
+pub async fn jspace_decide(
+    State(state): State<AppState>,
+    AxPath(id): AxPath<String>,
+    Json(req): Json<JSpaceDecideRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    if state.jspace.get_session(&id).is_none() {
+        return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Session not found" }))));
+    }
+
+    if req.candidates.len() < 2 || req.candidates.len() > 16 {
+        return Err((StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "Must provide 2..16 candidates" }))));
+    }
+
+    let criteria: Vec<crate::openjev::Candidate> = req.candidates.iter().enumerate().map(|(i, c)| {
+        crate::openjev::Candidate {
+            id: format!("cand_{}", i + 1),
+            description: c.clone(),
+        }
+    }).collect();
+
+    let decision_req = crate::openjev::OpenJevDecisionRequest {
+        id: uuid::Uuid::new_v4().to_string(),
+        group_id: format!("jspace-{}", id),
+        primitive: "choice".to_string(),
+        state: req.state_description.clone(),
+        instructions: req.instructions.clone(),
+        criteria,
+    };
+
+    let prompt = decision_req.render_prompt();
+    let judge_port = match state.ensure_worker("hcs-judge").await {
+        Ok(p) => p,
+        Err(e) => return Err((StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({ "error": e.to_string() })))),
+    };
+
+    let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(30)).build().unwrap_or_default();
+    let url = format!("http://127.0.0.1:{}/v1/chat/completions", judge_port);
+
+    let resp = client.post(&url)
+        .json(&serde_json::json!({
+            "model": "hcs-judge",
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.0,
+            "max_tokens": 1
+        }))
+        .send()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
+
+    let resp_val: Value = resp.json().await.unwrap_or_default();
+    let raw_choice = resp_val["choices"][0]["message"]["content"].as_str().unwrap_or("A").trim();
+    let parsed = decision_req.parse_output(raw_choice);
+
+    let chosen_id = parsed.candidate_id.as_deref().unwrap_or("cand_1");
+    let chosen_desc = req.candidates.get(
+        parsed.selected_label
+            .and_then(|lbl| (lbl as u8).checked_sub(b'A'))
+            .map(|idx| idx as usize)
+            .unwrap_or(0)
+    ).cloned().unwrap_or_else(|| chosen_id.to_string());
+
+    state.jspace.record_decision(&id, &req.candidates, &chosen_desc, None);
+
+    Ok(Json(serde_json::json!({
+        "session_id": id,
+        "selected_candidate": chosen_desc,
+        "selected_label": parsed.selected_label.map(|c| c.to_string()),
+        "response": parsed
+    })))
+}
+
+
 
